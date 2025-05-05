@@ -1,0 +1,52 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Qt build files
+*.qrc
+*.pyc
+*.pyo
+*.pyd
+*.pro.user
+*.pro.user.*
+*.qmlc
+*.jsc
+
+# Qt Designer backup
+*.bak
+
+# Plugin metadata files
+metadata.txt~
+*.zip
+*.tar.gz
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs and temporary files
+*.log
+*.tmp
+
+# Plugin builder build artifacts
+build/
+dist/
+*.egg-info/
+
+# QGIS Plugin testing artifacts
+tests/__pycache__/
+tests/*.pyc
+test-results/
+*.coverage
+
+# IDE/project files
+.vscode/
+.idea/
+*.code-workspace
+
+# QGIS specific
+*.qgis
+*.qgz
+*.gpkg-journal
+
