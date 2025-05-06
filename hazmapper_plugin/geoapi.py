@@ -170,9 +170,15 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 "Hazmapper", Qgis.Info
             )
 
+            # TODO need to pick a,b,c for QGIS; check why
+            if "{s}" in url:
+                url = url.replace("{s}", "a")
+
             if layer_type == "tms" or (layer_type == "arcgis" and "/tiles/" in url):
-                # XYZ tile layer
-                tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
+                if not url.endswith("/tile/{z}/{y}/{x}") and not "{z}/{x}/{y}" in url: # TODO refactor/test
+                    tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
+                else:
+                    tile_url = url
                 uri = f"type=xyz&url={tile_url}"
             elif layer_type == "arcgis":
                 # Use native arcgisrest if not a tile service
@@ -182,6 +188,7 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 QgsMessageLog.logMessage(f"Skipping unsupported layer type: {layer_type}", "Hazmapper", Qgis.Warning)
                 continue
 
+            # QGIS wants wms instead of xys TODO review what is going on here
             raster_layer = QgsRasterLayer(uri, name, "wms")
             if not raster_layer.isValid():
                 QgsMessageLog.logMessage(f"Failed to load layer: {name}", "Hazmapper", Qgis.Warning)
