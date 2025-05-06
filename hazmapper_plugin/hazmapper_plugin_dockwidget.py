@@ -5,12 +5,12 @@ from qgis.PyQt.QtWidgets import (
 from qgis.PyQt.QtCore import Qt, pyqtSignal
 from qgis.core import QgsTask, QgsApplication, QgsMessageLog, Qgis
 from qgis.PyQt.QtCore import QSettings, QDateTime
+from .geoapi import (LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep,
+                           create_or_replace_main_group, add_basemap_layers)
 
+from typing import Dict, Any, List, Optional, Union
+import traceback
 
-from .geoapi_tasks import LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
-
-import time
-from typing import Dict, Any
 
 
 class HazmapperPluginDockWidget(QDockWidget):
@@ -152,13 +152,32 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.label_status_icon.setText("❌")
             self.button_refresh.setEnabled(True)
 
-    def on_progress_data(self, geoapi_step: GeoApiStep, result: Dict[str, Any]):
-        if geoapi_step == GeoApiStep.PROJECT:
-            url = self.last_url
-            self.label_name.setText(result.get("name", "–"))
-            self.label_description.setText(result.get("description", "–"))
-            self.label_map_link.setText(f'<a href="{url}">{url}</a>')
-            self.label_last_refreshed.setText(QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm"))
+    def on_progress_data(self, geoapi_step: GeoApiStep,
+                         result: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]):
+        try:
+            QgsMessageLog.logMessage(f"Processing: {str(geoapi_step)}", "Hazmapper", Qgis.Info)
+
+            if geoapi_step == GeoApiStep.PROJECT:
+                url = self.last_url
+                self.label_name.setText(result.get("name", "–"))
+                self.label_description.setText(result.get("description", "–"))
+                self.label_map_link.setText(f'<a href="{url}">{url}</a>')
+                self.label_last_refreshed.setText(QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm"))
+
+                # TODO should refactor this as assuming PROJECT is first thing
+                self.main_group = create_or_replace_main_group(
+                    project_name=result.get("name", "Unnamed"),
+                    project_uuid=result.get("uuid", "unknown")
+                )
+            elif geoapi_step == GeoApiStep.BASEMAP_LAYERS:
+                if self.main_group:
+                    add_basemap_layers(self.main_group, result)
+        except Exception as e:
+            QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
+            self.update_status(GeoApiTaskState.FAILED, f"Unknown processing error during processing of {geoapi_step}")
+            import time; time.sleep(10)
+
+
 
     def on_done(self):
         """Callback triggered when the GeoAPI task finishes successfully."""
@@ -166,30 +185,34 @@ class HazmapperPluginDockWidget(QDockWidget):
         self.iface.messageBar().pushMessage("Hazmapper", "Hazmapper map loaded successfully.", level=Qgis.Info)
 
     def handle_refresh(self):
-        # url is ready for parsing and validated in `update_button_state`
-        url = self.input_url.text().strip()
-        QgsMessageLog.logMessage(f"Loading map project: {url}", "Hazmapper", Qgis.Info)
         try:
-            uuid = url.split("/project-public/")[1].split("/")[0]
-        except IndexError:
-            QgsMessageLog.logMessage("Error parsing url", "Hazmapper", Qgis.Critical)
-            self.update_status(GeoApiTaskState.FAILED, "Invalid project URL format.")
-            return
+            # url is ready for parsing and validated in `update_button_state`
+            url = self.input_url.text().strip()
+            QgsMessageLog.logMessage(f"Loading map project: {url}", "Hazmapper", Qgis.Info)
+            try:
+                uuid = url.split("/project-public/")[1].split("/")[0]
+            except IndexError:
+                QgsMessageLog.logMessage("Error parsing url", "Hazmapper", Qgis.Critical)
+                self.update_status(GeoApiTaskState.FAILED, "Invalid project URL format.")
+                return
 
-        QSettings().setValue("HazmapperPlugin/last_project_url", url)
-        self.last_url = url
+            QSettings().setValue("HazmapperPlugin/last_project_url", url)
+            self.last_url = url
 
 
-        QgsMessageLog.logMessage(f"Starting task to load map project: {url}, uuid:{uuid}", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(f"Starting task to load map project: {url}, uuid:{uuid}", "Hazmapper", Qgis.Info)
 
 
-        # Kick off async task to get project
-        self.active_task = LoadGeoApiProjectTask(uuid,
-                                     on_finished=self.on_done,
-                                     update_status=self.update_status,
-                                     on_progress_data=self.on_progress_data)
-        added = QgsApplication.taskManager().addTask(self.active_task)
-        QgsMessageLog.logMessage(f"Task added {added}", "Hazmapper", Qgis.Info)
+            # Kick off async task to get project
+            self.active_task = LoadGeoApiProjectTask(uuid,
+                                         on_finished=self.on_done,
+                                         update_status=self.update_status,
+                                         on_progress_data=self.on_progress_data)
+            added = QgsApplication.taskManager().addTask(self.active_task)
+            QgsMessageLog.logMessage(f"Task added #{added}", "Hazmapper", Qgis.Info)
+        except Exception:
+            QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Critical)
+            self.update_status(GeoApiTaskState.FAILED, "Error starting task")
 
     def closeEvent(self, event):
         self.closingPlugin.emit()
