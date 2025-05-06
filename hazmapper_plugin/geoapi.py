@@ -1,7 +1,11 @@
 from typing import Optional, Union, Dict, List, Any
 
 from qgis.core import (QgsTask, QgsApplication, QgsMessageLog, Qgis,
-                       QgsProject, QgsLayerTreeGroup, QgsRasterLayer)
+                       QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
+                       QgsFeature, QgsGeometry, QgsFillSymbol, QgsSimpleFillSymbolLayer,
+                       QgsLineSymbol, QgsJsonUtils, QgsField, QgsFields)
+from PyQt5.QtCore import QVariant
+from osgeo import ogr
 import urllib.request
 import urllib.error
 import json
@@ -114,10 +118,7 @@ class LoadGeoApiProjectTask(QgsTask):
 
 def create_or_replace_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup:
     QgsMessageLog.logMessage(f"[Hazmapper] Removing existing main group", "Hazmapper", Qgis.Info)
-    import time; time.sleep(4)
-
     root = QgsProject.instance().layerTreeRoot()
-    import time;   time.sleep(4)
 
     QgsMessageLog.logMessage(f"[Hazmapper] Removing existing main group2", "Hazmapper", Qgis.Info)
 
@@ -195,3 +196,151 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 f"Error processing layer '{layer_data.get('name', 'unnamed')}': {str(e)}",
                 "Hazmapper", Qgis.Critical
             )
+
+
+def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
+    # Group features by asset type
+    #  TODO should be grouped by both asset type AND geometry type (i.e. not all images are points)
+    point_cloud_features = []
+    image_features = []
+    streetview_features = []
+
+    for feature in features.get("features", []):
+        assets = feature.get("assets", [])
+        if not assets:
+            continue
+        first_asset = assets[0]
+        asset_type = first_asset.get("asset_type")
+        if asset_type == "point_cloud":
+            point_cloud_features.append((feature, first_asset))
+        elif asset_type == "image":
+            image_features.append(feature)
+        elif asset_type == "streetview":
+            streetview_features.append(feature)
+
+    # Create point cloud layers — one per feature
+    for feature, asset in point_cloud_features:
+        layer_name = asset.get("display_path", "Unnamed Point Cloud")
+        vl = _create_memory_layer(feature, layer_name)
+        _apply_default_style(vl)
+        _set_feature_metadata(vl, feature, asset)
+        QgsProject.instance().addMapLayer(vl, False)
+        main_group.addLayer(vl)
+
+    # Create a single image layer
+    if image_features:
+        vl = _create_memory_layer_collection(image_features, "Images")
+        _apply_default_style(vl)
+        QgsProject.instance().addMapLayer(vl, False)
+        main_group.addLayer(vl)
+
+    # Create a single streetview layer
+    if streetview_features:
+        vl = _create_memory_layer_collection(streetview_features, "StreetView")
+        _apply_streetview_style(vl)
+        QgsProject.instance().addMapLayer(vl, False)
+        main_group.addLayer(vl)
+
+    # TODO handle other types of assets or just plain geometry
+
+def json_to_wkt(geometry_json: str) -> str:
+    geom = ogr.CreateGeometryFromJson(geometry_json)
+    return geom.ExportToWkt()
+
+def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
+    geom_type = feature["geometry"]["type"]
+    layer = QgsVectorLayer(f"{geom_type}?crs=EPSG:4326", name, "memory")
+    provider = layer.dataProvider()
+
+    # Define fields
+    fields = QgsFields()
+    fields.append(QgsField("asset_type", QVariant.String))
+    fields.append(QgsField("display_path", QVariant.String))
+    provider.addAttributes(fields)
+    layer.updateFields()
+
+
+    # Build feature
+    f = QgsFeature()
+    geometry_json = json.dumps(feature["geometry"])
+    f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(geometry_json)))
+
+    asset = feature.get("assets", [{}])[0] or {}
+    f.setAttributes([
+        asset.get("asset_type", ""),
+        asset.get("display_path", "")
+    ])
+
+    provider.addFeature(f)
+    layer.updateExtents()
+    return layer
+
+
+def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer:
+    first_geom_type = features[0]["geometry"]["type"]
+    layer = QgsVectorLayer(f"{first_geom_type}?crs=EPSG:4326", name, "memory")
+    provider = layer.dataProvider()
+
+    # Define fields
+    fields = QgsFields()
+    fields.append(QgsField("asset_type", QVariant.String))
+    fields.append(QgsField("display_path", QVariant.String))
+    provider.addAttributes(fields)
+    layer.updateFields()
+
+    features_to_add = []
+    for feature in features:
+        asset = feature.get("assets", [{}])[0] or {}
+
+        f = QgsFeature()
+        geometry_json = json.dumps(feature["geometry"])
+        geometry = QgsGeometry.fromWkt(json_to_wkt(geometry_json))
+        f.setGeometry(geometry)
+
+        # Set attributes
+        f.setAttributes([
+            asset.get("asset_type", ""),
+            asset.get("display_path", "")
+        ])
+        features_to_add.append(f)
+
+    provider.addFeatures(features_to_add)
+    layer.updateExtents()
+    return layer
+
+
+
+
+def _set_feature_metadata(feature_or_layer, feature, asset):
+    # Set metadata on QgsFeature or layer depending on type
+    for k, v in asset.items():
+        feature_or_layer.setCustomProperty(f"asset_{k}", v)
+
+def _apply_default_style(layer):
+    symbol = QgsFillSymbol.createSimple({
+        'color': '#3388ff',
+        'outline_color': '#3388ff',
+        'outline_width': '0.66',  # 3px-ish
+        'style': 'solid',
+        'outline_style': 'solid',
+        'fill_opacity': '0.2',
+    })
+    layer.renderer().setSymbol(symbol)
+    layer.triggerRepaint()
+
+def _apply_streetview_style(layer, style_name='default'):
+    styles = {
+        'default': {'color': '#22C7FF', 'width': '2.5', 'opacity': '0.6'},
+        'select': {'color': '#22C7FF', 'width': '3', 'opacity': '1.0'},
+        'hover': {'color': '#22C7FF', 'width': '3', 'opacity': '0.8'},
+    }
+    style = styles.get(style_name, styles['default'])
+
+    symbol = QgsLineSymbol.createSimple({
+        'color': style['color'],
+        'width': style['width'],
+        'line_style': 'solid',
+    })
+    symbol.setOpacity(float(style['opacity']))
+    layer.renderer().setSymbol(symbol)
+    layer.triggerRepaint()

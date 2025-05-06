@@ -6,11 +6,10 @@ from qgis.PyQt.QtCore import Qt, pyqtSignal
 from qgis.core import QgsTask, QgsApplication, QgsMessageLog, Qgis
 from qgis.PyQt.QtCore import QSettings, QDateTime
 from .geoapi import (LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep,
-                           create_or_replace_main_group, add_basemap_layers)
+                     create_or_replace_main_group, add_basemap_layers, add_features_layers)
 
 from typing import Dict, Any, List, Optional, Union
 import traceback
-
 
 
 class HazmapperPluginDockWidget(QDockWidget):
@@ -172,7 +171,11 @@ class HazmapperPluginDockWidget(QDockWidget):
             elif geoapi_step == GeoApiStep.BASEMAP_LAYERS:
                 if self.main_group:
                     add_basemap_layers(self.main_group, result)
+            elif geoapi_step == GeoApiStep.FEATURES:
+                if self.main_group:
+                    add_features_layers(self.main_group, result)
         except Exception as e:
+            import time; time.sleep(2)
             QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
             self.update_status(GeoApiTaskState.FAILED, f"Unknown processing error during processing of {geoapi_step}")
             import time; time.sleep(10)
