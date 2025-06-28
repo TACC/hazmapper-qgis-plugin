@@ -19,7 +19,7 @@ from qgis.PyQt.QtGui import QIcon
 
 
 class HazmapperPluginDialogTest(unittest.TestCase):
-    """Test rerources work."""
+    """Test resources work."""
 
     def setUp(self):
         """Runs before each test."""
@@ -36,7 +36,7 @@ class HazmapperPluginDialogTest(unittest.TestCase):
         self.assertFalse(icon.isNull())
 
 if __name__ == "__main__":
-    suite = unittest.makeSuite(HazmapperPluginResourcesTest)
+    suite = unittest.makeSuite(HazmapperPluginDialogTest)
     runner = unittest.TextTestRunner(verbosity=2)
     runner.run(suite)
 

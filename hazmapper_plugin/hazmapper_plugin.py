@@ -170,6 +170,5 @@ class HazmapperPlugin:
 
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
 
-            # TODO: allow choice of dock location
             self.iface.addDockWidget(Qt.TopDockWidgetArea, self.dockwidget)
             self.dockwidget.show()

@@ -56,6 +56,14 @@ If you make changes to icons or update `resources.qrc`, you must recompile the r
 cd hazmapper_plugin
 pyrcc5 -o resources_rc.py resources.qrc
 ```
+### Testing
+
+```bash
+docker run --rm -v $(pwd):/workspace -w /workspace \
+  -e QT_QPA_PLATFORM=offscreen \
+  qgis/qgis:release-3_34 \
+  python3 -m unittest discover -s hazmapper_plugin/test -p 'test_*.py' -v
+```
 
 ## Related Projects
 

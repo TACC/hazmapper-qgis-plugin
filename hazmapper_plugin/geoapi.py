@@ -3,7 +3,8 @@ from typing import Optional, Union, Dict, List, Any
 from qgis.core import (QgsTask, QgsApplication, QgsMessageLog, Qgis,
                        QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
                        QgsFeature, QgsGeometry, QgsFillSymbol, QgsSimpleFillSymbolLayer,
-                       QgsLineSymbol, QgsJsonUtils, QgsField, QgsFields)
+                       QgsLineSymbol, QgsJsonUtils, QgsField, QgsFields, QgsSvgMarkerSymbolLayer,
+                       QgsMarkerSymbol)
 from PyQt5.QtCore import QVariant
 from osgeo import ogr
 import urllib.request
@@ -120,8 +121,6 @@ def create_or_replace_main_group(project_name: str, project_uuid: str) -> QgsLay
     QgsMessageLog.logMessage(f"[Hazmapper] Removing existing main group", "Hazmapper", Qgis.Info)
     root = QgsProject.instance().layerTreeRoot()
 
-    QgsMessageLog.logMessage(f"[Hazmapper] Removing existing main group2", "Hazmapper", Qgis.Info)
-
     try:
         # Look for and remove any existing group with this UUID
         for child in root.children():
@@ -170,20 +169,16 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 "Hazmapper", Qgis.Info
             )
 
-            # TODO need to pick a,b,c for QGIS; check why
+            #  Need to pick a,b,c for QGIS
             if "{s}" in url:
                 url = url.replace("{s}", "a")
 
             if layer_type == "tms" or (layer_type == "arcgis" and "/tiles/" in url):
-                if not url.endswith("/tile/{z}/{y}/{x}") and not "{z}/{x}/{y}" in url: # TODO refactor/test
+                if not url.endswith("/tile/{z}/{y}/{x}") and not "{z}/{x}/{y}" in url:
                     tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
                 else:
                     tile_url = url
                 uri = f"type=xyz&url={tile_url}"
-            elif layer_type == "arcgis":
-                # Use native arcgisrest if not a tile service
-                # TODO: untested
-                uri = f"type=arcgisrest&url={url}"
             else:
                 QgsMessageLog.logMessage(f"Skipping unsupported layer type: {layer_type}", "Hazmapper", Qgis.Warning)
                 continue
@@ -196,7 +191,7 @@ def add_basemap_layers(main_group, layers: list[dict]):
 
             raster_layer.setOpacity(opacity)
             QgsProject.instance().addMapLayer(raster_layer, False)
-            main_group.addLayer(raster_layer)
+            main_group.insertLayer(0, raster_layer)
 
         except Exception as e:
             QgsMessageLog.logMessage(
@@ -229,24 +224,24 @@ def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
     for feature, asset in point_cloud_features:
         layer_name = asset.get("display_path", "Unnamed Point Cloud")
         vl = _create_memory_layer(feature, layer_name)
-        _apply_default_style(vl)
         _set_feature_metadata(vl, feature, asset)
+        _apply_point_cloud_style(vl)
         QgsProject.instance().addMapLayer(vl, False)
-        main_group.addLayer(vl)
+        main_group.insertLayer(0, vl)
 
     # Create a single image layer
     if image_features:
         vl = _create_memory_layer_collection(image_features, "Images")
-        _apply_default_style(vl)
+        _apply_camera_icon_style(vl)
         QgsProject.instance().addMapLayer(vl, False)
-        main_group.addLayer(vl)
+        main_group.insertLayer(0, vl)
 
     # Create a single streetview layer
     if streetview_features:
         vl = _create_memory_layer_collection(streetview_features, "StreetView")
         _apply_streetview_style(vl)
         QgsProject.instance().addMapLayer(vl, False)
-        main_group.addLayer(vl)
+        main_group.insertLayer(0, vl)
 
     # TODO handle other types of assets or just plain geometry
 
@@ -323,6 +318,7 @@ def _set_feature_metadata(feature_or_layer, feature, asset):
     for k, v in asset.items():
         feature_or_layer.setCustomProperty(f"asset_{k}", v)
 
+
 def _apply_default_style(layer):
     symbol = QgsFillSymbol.createSimple({
         'color': '#3388ff',
@@ -334,6 +330,29 @@ def _apply_default_style(layer):
     })
     layer.renderer().setSymbol(symbol)
     layer.triggerRepaint()
+
+
+def _apply_camera_icon_style(layer):
+    # TODO refactor to make portable
+    svg_path = "/Applications/QGIS.app/Contents/Resources/svg/gpsicons/camera.svg"
+    svg_layer = QgsSvgMarkerSymbolLayer(svg_path, 6.0, 0)
+
+    symbol = QgsMarkerSymbol()
+    symbol.changeSymbolLayer(0, svg_layer)
+    layer.renderer().setSymbol(symbol)
+    layer.triggerRepaint()
+
+
+def _apply_point_cloud_style(layer):
+    symbol = QgsFillSymbol.createSimple({
+        'style': 'no',
+        'color': '0,0,0,0',  # transparent fill
+        'outline_color': '#3388ff',
+        'outline_width': '0.66'
+    })
+    layer.renderer().setSymbol(symbol)
+    layer.triggerRepaint()
+
 
 def _apply_streetview_style(layer, style_name='default'):
     styles = {

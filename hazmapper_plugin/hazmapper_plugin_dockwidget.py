@@ -175,10 +175,8 @@ class HazmapperPluginDockWidget(QDockWidget):
                 if self.main_group:
                     add_features_layers(self.main_group, result)
         except Exception as e:
-            import time; time.sleep(2)
             QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
             self.update_status(GeoApiTaskState.FAILED, f"Unknown processing error during processing of {geoapi_step}")
-            import time; time.sleep(10)
 
 
 
