@@ -167,56 +167,6 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         )
 
 
-class TestDataProcessing(unittest.TestCase):
-    """Test data processing functions (requires mocking QGIS components)."""
-
-    def test_feature_grouping_logic(self):
-        """Test that features are properly grouped by asset type."""
-        features_data = {
-            "features": [
-                {
-                    "geometry": {"type": "Point", "coordinates": [0, 0]},
-                    "assets": [{"asset_type": "image", "display_path": "image1.jpg"}]
-                },
-                {
-                    "geometry": {"type": "Point", "coordinates": [1, 1]},
-                    "assets": [{"asset_type": "point_cloud", "display_path": "cloud1.las"}]
-                },
-                {
-                    "geometry": {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
-                    "assets": [{"asset_type": "streetview", "display_path": "street1.jpg"}]
-                }
-            ]
-        }
-
-        # Extract the grouping logic for testing
-        point_cloud_features = []
-        image_features = []
-        streetview_features = []
-
-        for feature in features_data.get("features", []):
-            assets = feature.get("assets", [])
-            if not assets:
-                continue
-            first_asset = assets[0]
-            asset_type = first_asset.get("asset_type")
-            if asset_type == "point_cloud":
-                point_cloud_features.append((feature, first_asset))
-            elif asset_type == "image":
-                image_features.append(feature)
-            elif asset_type == "streetview":
-                streetview_features.append(feature)
-
-        self.assertEqual(len(point_cloud_features), 1)
-        self.assertEqual(len(image_features), 1)
-        self.assertEqual(len(streetview_features), 1)
-
-        # Test specific grouping results
-        self.assertEqual(point_cloud_features[0][1]["display_path"], "cloud1.las")
-        self.assertEqual(image_features[0]["assets"][0]["display_path"], "image1.jpg")
-        self.assertEqual(streetview_features[0]["assets"][0]["display_path"], "street1.jpg")
-
-
 class TestIntegration(unittest.TestCase):
     """Integration tests with mocked QGIS components."""
 
