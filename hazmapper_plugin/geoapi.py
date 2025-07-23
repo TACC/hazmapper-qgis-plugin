@@ -1,13 +1,8 @@
 from typing import Optional, Union, Dict, List, Any
 
-from qgis.core import (QgsTask, QgsApplication, QgsMessageLog, Qgis,
+from qgis.core import (QgsTask, QgsMessageLog, Qgis,
                        QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
-                       QgsFeature, QgsGeometry, QgsField, QgsFields,)
-from .utils.style import (
-    apply_camera_icon_style,
-    apply_point_cloud_style,
-    apply_streetview_style
-)
+                       QgsFeature, QgsGeometry, QgsField, QgsFields)
 from PyQt5.QtCore import QVariant
 from osgeo import ogr
 from urllib import request
@@ -15,8 +10,12 @@ import json
 import traceback
 import uuid as py_uuid
 
-from .user import get_or_create_guest_uuid
-
+from .utils.user import get_or_create_guest_uuid
+from .utils.style import (
+    apply_camera_icon_style,
+    apply_point_cloud_style,
+    apply_streetview_style
+)
 
 class GeoApiTaskState:
     RUNNING = "running"
@@ -56,7 +55,6 @@ class LoadGeoApiProjectTask(QgsTask):
         }
 
         # TODO: use QgsNetworkAccessManager instead of urllib
-
 
         # Create request with headers used by hazmapper backend for metrics
         req = request.Request(full_url, headers=headers)
