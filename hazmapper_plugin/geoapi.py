@@ -7,11 +7,12 @@ from qgis.core import (QgsTask, QgsApplication, QgsMessageLog, Qgis,
                        QgsMarkerSymbol)
 from PyQt5.QtCore import QVariant
 from osgeo import ogr
-import urllib.request
-import urllib.error
+from urllib import request, error
 import json
 import traceback
 import uuid as py_uuid
+
+from .user import get_or_create_guest_uuid
 
 
 class GeoApiTaskState:
@@ -39,33 +40,32 @@ class LoadGeoApiProjectTask(QgsTask):
         self.error = None
 
     def _request_data_from_backend(self, endpoint, user_description, base=None) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
-        # TODO: yse QgsNetworkAccessManager instead of urllib
-
         self.update_status(GeoApiTaskState.RUNNING, f"Fetching {user_description}...")
 
         if base is None:
             base = self.base_url
         full_url = f"{base}{endpoint}"
 
-        # TODO: add header to signify QGIS and guest user (x-geoapi-application, x-geoapi-ispublicview, x-guest-uuid)
+        headers = {
+            "X-Geoapi-Application": "QGIS",
+            "X-Geoapi-IsPublicView": "true", # currently
+            "X-Guest-Uuid": get_or_create_guest_uuid(),
+        }
+
+        # TODO: use QgsNetworkAccessManager instead of urllib
+
+
+        # Create request with headers used by hazmapper backend for metrics
+        req = request.Request(full_url, headers=headers)
         try:
-            with urllib.request.urlopen(full_url) as response:
+            with request.urlopen(req) as response:
                 if response.status != 200:
-                    self.error = f"Server responded with status {response.status}"
-                    return None
-
-                raw = response.read().decode()
-                data = json.loads(raw)
-                return data
-
-        except urllib.error.URLError as e:
-            QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
-            self.error = f"Fetching {user_description}. full_url:{full_url};  Network error: {e.reason}"
-            return None
+                    raise Exception(f"HTTP {response.status}")
+                return json.loads(response.read().decode())
         except Exception as e:
+            self.error = f"Fetching {user_description} failed: {str(e)}"
             QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
-            self.error = f"Fetching {user_description}. full_url:{full_url}; Unexpected error: {str(e)}"
-        return None
+            return None
 
     def run(self):
         QgsMessageLog.logMessage(f"Task to load map project started: uuid:{self.uuid}", "Hazmapper", Qgis.Info)

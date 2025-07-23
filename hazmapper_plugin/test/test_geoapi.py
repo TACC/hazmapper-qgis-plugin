@@ -89,7 +89,9 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         result = self.task._request_data_from_backend("/test", "test data")
 
         self.assertIsNone(result)
-        self.assertIn("Server responded with status 404", self.task.error)
+        self.assertIn("Fetching test data failed", self.task.error)
+        self.assertIn("404", self.task.error)
+
 
     @patch('urllib.request.urlopen')
     def test_request_data_network_error(self, mock_urlopen):
@@ -99,7 +101,7 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         result = self.task._request_data_from_backend("/test", "test data")
 
         self.assertIsNone(result)
-        self.assertIn("Network error", self.task.error)
+        self.assertIn("Fetching test data failed", self.task.error)
 
     @patch('urllib.request.urlopen')
     def test_request_data_json_error(self, mock_urlopen):
@@ -112,7 +114,7 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         result = self.task._request_data_from_backend("/test", "test data")
 
         self.assertIsNone(result)
-        self.assertIn("Unexpected error", self.task.error)
+        self.assertIn("Fetching test data failed", self.task.error)
 
     @patch.object(LoadGeoApiProjectTask, '_request_data_from_backend')
     def test_run_success(self, mock_request):
