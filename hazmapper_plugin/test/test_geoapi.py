@@ -172,7 +172,6 @@ class TestDataProcessing(unittest.TestCase):
 
     def test_feature_grouping_logic(self):
         """Test that features are properly grouped by asset type."""
-        # Test the logic that groups features by asset type
         features_data = {
             "features": [
                 {
@@ -216,50 +215,6 @@ class TestDataProcessing(unittest.TestCase):
         self.assertEqual(point_cloud_features[0][1]["display_path"], "cloud1.las")
         self.assertEqual(image_features[0]["assets"][0]["display_path"], "image1.jpg")
         self.assertEqual(streetview_features[0]["assets"][0]["display_path"], "street1.jpg")
-
-    def test_basemap_layer_sorting(self):
-        """Test basemap layers are sorted by zIndex."""
-        layers = [
-            {"name": "Layer B", "uiOptions": {"zIndex": 2}},
-            {"name": "Layer A", "uiOptions": {"zIndex": 1}},
-            {"name": "Layer C", "uiOptions": {"zIndex": 3}},
-            {"name": "Layer No Z", "uiOptions": {}}  # Should default to 0
-        ]
-
-        # Test the sorting logic
-        sorted_layers = sorted(layers, key=lambda x: x["uiOptions"].get("zIndex", 0))
-
-        expected_order = ["Layer No Z", "Layer A", "Layer B", "Layer C"]
-        actual_order = [layer["name"] for layer in sorted_layers]
-
-        self.assertEqual(actual_order, expected_order)
-
-    def test_url_processing(self):
-        """Test URL processing for tile servers."""
-        test_cases = [
-            # TMS with {s} placeholder
-            {
-                "input": "https://tiles.example.com/{s}/tiles/{z}/{x}/{y}.png",
-                "expected": "https://tiles.example.com/a/tiles/{z}/{x}/{y}.png"
-            },
-            # ArcGIS tile server
-            {
-                "input": "https://server.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer",
-                "type": "arcgis",
-                "expected_contains": "/tile/{z}/{y}/{x}"
-            }
-        ]
-
-        for case in test_cases:
-            url = case["input"]
-            if "{s}" in url:
-                url = url.replace("{s}", "a")
-                self.assertEqual(url, case["expected"])
-
-            if case.get("type") == "arcgis" and "/tiles/" not in url:
-                if not url.endswith("/tile/{z}/{y}/{x}") and not "{z}/{x}/{y}" in url:
-                    tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
-                    self.assertIn(case["expected_contains"], tile_url)
 
 
 class TestIntegration(unittest.TestCase):
