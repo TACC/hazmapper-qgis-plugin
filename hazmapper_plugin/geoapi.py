@@ -2,12 +2,15 @@ from typing import Optional, Union, Dict, List, Any
 
 from qgis.core import (QgsTask, QgsApplication, QgsMessageLog, Qgis,
                        QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
-                       QgsFeature, QgsGeometry, QgsFillSymbol, QgsSimpleFillSymbolLayer,
-                       QgsLineSymbol, QgsJsonUtils, QgsField, QgsFields, QgsSvgMarkerSymbolLayer,
-                       QgsMarkerSymbol)
+                       QgsFeature, QgsGeometry, QgsField, QgsFields,)
+from .utils.style import (
+    apply_camera_icon_style,
+    apply_point_cloud_style,
+    apply_streetview_style
+)
 from PyQt5.QtCore import QVariant
 from osgeo import ogr
-from urllib import request, error
+from urllib import request
 import json
 import traceback
 import uuid as py_uuid
@@ -225,21 +228,21 @@ def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
         layer_name = asset.get("display_path", "Unnamed Point Cloud")
         vl = _create_memory_layer(feature, layer_name)
         _set_feature_metadata(vl, feature, asset)
-        _apply_point_cloud_style(vl)
+        apply_point_cloud_style(vl)
         QgsProject.instance().addMapLayer(vl, False)
         main_group.insertLayer(0, vl)
 
     # Create a single image layer
     if image_features:
         vl = _create_memory_layer_collection(image_features, "Images")
-        _apply_camera_icon_style(vl)
+        apply_camera_icon_style(vl)
         QgsProject.instance().addMapLayer(vl, False)
         main_group.insertLayer(0, vl)
 
     # Create a single streetview layer
     if streetview_features:
         vl = _create_memory_layer_collection(streetview_features, "StreetView")
-        _apply_streetview_style(vl)
+        apply_streetview_style(vl)
         QgsProject.instance().addMapLayer(vl, False)
         main_group.insertLayer(0, vl)
 
@@ -319,54 +322,3 @@ def _set_feature_metadata(feature_or_layer, feature, asset):
         feature_or_layer.setCustomProperty(f"asset_{k}", v)
 
 
-def _apply_default_style(layer):
-    symbol = QgsFillSymbol.createSimple({
-        'color': '#3388ff',
-        'outline_color': '#3388ff',
-        'outline_width': '0.66',  # 3px-ish
-        'style': 'solid',
-        'outline_style': 'solid',
-        'fill_opacity': '0.2',
-    })
-    layer.renderer().setSymbol(symbol)
-    layer.triggerRepaint()
-
-
-def _apply_camera_icon_style(layer):
-    # TODO refactor to make portable
-    svg_path = "/Applications/QGIS.app/Contents/Resources/svg/gpsicons/camera.svg"
-    svg_layer = QgsSvgMarkerSymbolLayer(svg_path, 6.0, 0)
-
-    symbol = QgsMarkerSymbol()
-    symbol.changeSymbolLayer(0, svg_layer)
-    layer.renderer().setSymbol(symbol)
-    layer.triggerRepaint()
-
-
-def _apply_point_cloud_style(layer):
-    symbol = QgsFillSymbol.createSimple({
-        'style': 'no',
-        'color': '0,0,0,0',  # transparent fill
-        'outline_color': '#3388ff',
-        'outline_width': '0.66'
-    })
-    layer.renderer().setSymbol(symbol)
-    layer.triggerRepaint()
-
-
-def _apply_streetview_style(layer, style_name='default'):
-    styles = {
-        'default': {'color': '#22C7FF', 'width': '2.5', 'opacity': '0.6'},
-        'select': {'color': '#22C7FF', 'width': '3', 'opacity': '1.0'},
-        'hover': {'color': '#22C7FF', 'width': '3', 'opacity': '0.8'},
-    }
-    style = styles.get(style_name, styles['default'])
-
-    symbol = QgsLineSymbol.createSimple({
-        'color': style['color'],
-        'width': style['width'],
-        'line_style': 'solid',
-    })
-    symbol.setOpacity(float(style['opacity']))
-    layer.renderer().setSymbol(symbol)
-    layer.triggerRepaint()
