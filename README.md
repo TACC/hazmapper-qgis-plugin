@@ -16,7 +16,7 @@ This QGIS plugin allows users to connect to **Hazmapper**, a geospatial data pla
 ## Development
 
 To just install once, you could clone the repo and copy in to the QGis plugin folder. Using a symbolic link makes things easier
-for development and recomended:
+for development and is recommended:
 
 
 ### Step 1: Clone this repository:
