@@ -27,17 +27,20 @@ class HazmapperPluginDockWidget(QDockWidget):
 
         # Restrict docking to right side only
         self.setAllowedAreas(Qt.RightDockWidgetArea)
-        
+
         # Central widget
         main_widget = QWidget()
         self.setWidget(main_widget)
 
         # Layout containers
         layout = QVBoxLayout()
+        layout.setSpacing(4)  # Reduce from default spacing
+        layout.setContentsMargins(6, 6, 6, 6)  # Smaller margins
         main_widget.setLayout(layout)
 
         # --- URL Input Row ---
-        self.label_url = QLabel("Hazmapper Project URL:")
+        self.label_url = QLabel("URL:")
+        self.label_url.setMinimumWidth(30)  # Fixed small width
         self.label_url.setToolTip(
             "Paste a public Hazmapper project URL here.\nExample:\nhttps://hazmapper.tacc.utexas.edu/hazmapper/project-public/a1e0eb3a-8db7-4b2a-8412-80213841570b"
         )
@@ -52,8 +55,9 @@ class HazmapperPluginDockWidget(QDockWidget):
 
         # URL row layout
         url_row = QHBoxLayout()
+        url_row.setSpacing(4)  # Tighter spacing
         url_row.addWidget(self.label_url)
-        url_row.addWidget(self.input_url)
+        url_row.addWidget(self.input_url, 1)  # Give input most space
         url_row.addWidget(self.button_refresh)
 
         layout.addLayout(url_row)
@@ -75,20 +79,33 @@ class HazmapperPluginDockWidget(QDockWidget):
 
         # --- Metadata Table ---
         grid = QGridLayout()
-        grid.setSpacing(6)
+        grid.setSpacing(3)  # Tighter spacing
+        grid.setVerticalSpacing(2)  # Even tighter vertical spacing
 
         self.label_name_title = QLabel("Name:")
+        self.label_name_title.setMinimumWidth(80)  # Fixed width for alignment
+        self.label_name_title.setMaximumWidth(80)
         self.label_name = QLabel("–")
+        self.label_name.setWordWrap(True)
 
         self.label_description_title = QLabel("Description:")
+        self.label_description_title.setMinimumWidth(80)
+        self.label_description_title.setMaximumWidth(80)
         self.label_description = QLabel("–")
+        self.label_description.setWordWrap(True)
+        self.label_description.setMaximumHeight(40)  # Limit height
 
         self.label_map_link_title = QLabel("Map:")
+        self.label_map_link_title.setMinimumWidth(80)
+        self.label_map_link_title.setMaximumWidth(80)
         self.label_map_link = QLabel("–")
         self.label_map_link.setTextFormat(Qt.RichText)
         self.label_map_link.setOpenExternalLinks(True)
+        self.label_map_link.setWordWrap(True)
 
         self.label_last_refreshed_title = QLabel("Last Refreshed:")
+        self.label_last_refreshed_title.setMinimumWidth(80)
+        self.label_last_refreshed_title.setMaximumWidth(80)
         self.label_last_refreshed = QLabel("–")
 
         grid.addWidget(self.label_name_title, 0, 0)
@@ -103,7 +120,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         grid.addWidget(self.label_last_refreshed_title, 3, 0)
         grid.addWidget(self.label_last_refreshed, 3, 1)
 
-        layout.addSpacing(10)
+        layout.addSpacing(4)
         layout.addLayout(grid)
 
         # --- Connect Logic ---
@@ -181,8 +198,6 @@ class HazmapperPluginDockWidget(QDockWidget):
             QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
             self.update_status(GeoApiTaskState.FAILED, f"Unknown processing error during processing of {geoapi_step}")
 
-
-
     def on_done(self):
         """Callback triggered when the GeoAPI task finishes successfully."""
         self.update_status(GeoApiTaskState.DONE, "Hazmapper map loaded successfully.")
@@ -203,15 +218,13 @@ class HazmapperPluginDockWidget(QDockWidget):
             QSettings().setValue("HazmapperPlugin/last_project_url", url)
             self.last_url = url
 
-
             QgsMessageLog.logMessage(f"Starting task to load map project: {url}, uuid:{uuid}", "Hazmapper", Qgis.Info)
-
 
             # Kick off async task to get project
             self.active_task = LoadGeoApiProjectTask(uuid,
-                                         on_finished=self.on_done,
-                                         update_status=self.update_status,
-                                         on_progress_data=self.on_progress_data)
+                                                     on_finished=self.on_done,
+                                                     update_status=self.update_status,
+                                                     on_progress_data=self.on_progress_data)
             added = QgsApplication.taskManager().addTask(self.active_task)
             QgsMessageLog.logMessage(f"Task added #{added}", "Hazmapper", Qgis.Info)
         except Exception:
