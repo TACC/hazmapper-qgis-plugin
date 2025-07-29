@@ -93,7 +93,7 @@ class HazmapperPlugin:
     def initGui(self):
         """Create the toolbar button (Plugins toolbar only)."""
 
-        icon_path = ':/plugins/hazmapper_plugin/icon.png'
+        icon_path = ':/plugins/hazmapper_plugin/Hazmapper.svg'
         self.add_action(
             icon_path,
             text=self.tr(u'Hazmapper Tools'),
