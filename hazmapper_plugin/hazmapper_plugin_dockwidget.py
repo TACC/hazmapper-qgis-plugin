@@ -1,12 +1,13 @@
 from qgis.PyQt.QtWidgets import (
     QDockWidget, QLabel, QLineEdit, QPushButton,
-    QVBoxLayout, QHBoxLayout, QWidget, QGridLayout
+    QVBoxLayout, QHBoxLayout, QWidget
 )
 from qgis.PyQt.QtCore import Qt, pyqtSignal
 from qgis.core import QgsTask, QgsApplication, QgsMessageLog, Qgis
-from qgis.PyQt.QtCore import QSettings, QDateTime
+from qgis.PyQt.QtCore import QSettings
 from .geoapi import (LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep,
                      create_or_replace_main_group, add_basemap_layers, add_features_layers)
+from .components.map_status import MapStatus
 
 from typing import Dict, Any, List, Optional, Union
 import traceback
@@ -66,62 +67,9 @@ class HazmapperPluginDockWidget(QDockWidget):
         self.input_url.textChanged.connect(self.update_button_state)
         self.input_url.returnPressed.connect(self.button_refresh.click)
 
-        # --- Status Row ---
-        self.label_status_icon = QLabel("🟢")
-        self.label_status = QLabel("Ready")
-
-        status_row = QHBoxLayout()
-        status_row.addWidget(self.label_status_icon)
-        status_row.addWidget(self.label_status)
-        status_row.addStretch()
-
-        layout.addLayout(status_row)
-
-        # --- Metadata Table ---
-        grid = QGridLayout()
-        grid.setSpacing(3)  # Tighter spacing
-        grid.setVerticalSpacing(2)  # Even tighter vertical spacing
-
-        self.label_name_title = QLabel("Name:")
-        self.label_name_title.setMinimumWidth(80)  # Fixed width for alignment
-        self.label_name_title.setMaximumWidth(80)
-        self.label_name = QLabel("–")
-        self.label_name.setWordWrap(True)
-
-        self.label_description_title = QLabel("Description:")
-        self.label_description_title.setMinimumWidth(80)
-        self.label_description_title.setMaximumWidth(80)
-        self.label_description = QLabel("–")
-        self.label_description.setWordWrap(True)
-        self.label_description.setMaximumHeight(40)  # Limit height
-
-        self.label_map_link_title = QLabel("Map:")
-        self.label_map_link_title.setMinimumWidth(80)
-        self.label_map_link_title.setMaximumWidth(80)
-        self.label_map_link = QLabel("–")
-        self.label_map_link.setTextFormat(Qt.RichText)
-        self.label_map_link.setOpenExternalLinks(True)
-        self.label_map_link.setWordWrap(True)
-
-        self.label_last_refreshed_title = QLabel("Last Refreshed:")
-        self.label_last_refreshed_title.setMinimumWidth(80)
-        self.label_last_refreshed_title.setMaximumWidth(80)
-        self.label_last_refreshed = QLabel("–")
-
-        grid.addWidget(self.label_name_title, 0, 0)
-        grid.addWidget(self.label_name, 0, 1)
-
-        grid.addWidget(self.label_description_title, 1, 0)
-        grid.addWidget(self.label_description, 1, 1)
-
-        grid.addWidget(self.label_map_link_title, 2, 0)
-        grid.addWidget(self.label_map_link, 2, 1)
-
-        grid.addWidget(self.label_last_refreshed_title, 3, 0)
-        grid.addWidget(self.label_last_refreshed, 3, 1)
-
-        layout.addSpacing(4)
-        layout.addLayout(grid)
+        # --- Map Status Component (includes status + all metadata) ---
+        self.map_status = MapStatus()
+        layout.addWidget(self.map_status)
 
         # --- Connect Logic ---
         self.button_refresh.clicked.connect(self.handle_refresh)
@@ -139,8 +87,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         # Check if it's a public Hazmapper URL
         if not url or "/project-public/" not in url:
             self.button_refresh.setEnabled(False)
-            self.label_status_icon.setText("🔴")
-            self.label_status.setText("Invalid URL — must be a public Hazmapper project.")
+            self.map_status.set_invalid_url()
             return
 
         # Enable button
@@ -151,24 +98,20 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.button_refresh.setText("Reload")
         else:
             self.button_refresh.setText("Load")
-            self.label_status_icon.setText("🟢")
-            self.label_status.setText("Ready")
+            self.map_status.set_ready()
 
     def update_status(self, geoapi_state, message):
-        self.label_status.setText(message)
-
         if geoapi_state == GeoApiTaskState.RUNNING:
-            self.label_status_icon.setText("🔄")
+            self.map_status.set_running()
             self.button_refresh.setEnabled(False)
         elif geoapi_state == GeoApiTaskState.DONE:
-            self.label_status_icon.setText("✅")
+            self.map_status.set_success("Hazmapper map loaded successfully.")
             self.button_refresh.setEnabled(True)
         elif geoapi_state == GeoApiTaskState.FAILED:
-            self.label_status_icon.setText("❌")
+            self.map_status.set_error(message)
             self.button_refresh.setEnabled(True)
         else:
-            self.label_status.setText("Unknown state")
-            self.label_status_icon.setText("❌")
+            self.map_status.set_error("Unknown state")
             self.button_refresh.setEnabled(True)
 
     def on_progress_data(self, geoapi_step: GeoApiStep,
@@ -177,11 +120,12 @@ class HazmapperPluginDockWidget(QDockWidget):
             QgsMessageLog.logMessage(f"Processing: {str(geoapi_step)}", "Hazmapper", Qgis.Info)
 
             if geoapi_step == GeoApiStep.PROJECT:
-                url = self.last_url
-                self.label_name.setText(result.get("name", "–"))
-                self.label_description.setText(result.get("description", "–"))
-                self.label_map_link.setText(f'<a href="{url}">{url}</a>')
-                self.label_last_refreshed.setText(QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm"))
+                # Update all project metadata at once
+                self.map_status.update_project_data(
+                    name=result.get("name", "–"),
+                    description=result.get("description", "–"),
+                    url=self.last_url
+                )
 
                 # TODO should refactor this as assuming PROJECT is first thing
                 self.main_group = create_or_replace_main_group(
