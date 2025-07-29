@@ -23,8 +23,11 @@ class HazmapperPluginDockWidget(QDockWidget):
         self.iface = iface
         self.plugin_dir = plugin_dir
 
-        self.setWindowTitle("Hazmapper Sync")
+        self.setWindowTitle("Hazmapper")
 
+        # Restrict docking to right side only
+        self.setAllowedAreas(Qt.RightDockWidgetArea)
+        
         # Central widget
         main_widget = QWidget()
         self.setWidget(main_widget)
