@@ -2,12 +2,17 @@ from qgis.PyQt.QtWidgets import (
     QDockWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QHBoxLayout, QWidget
 )
-from qgis.PyQt.QtCore import Qt, pyqtSignal
-from qgis.core import QgsTask, QgsApplication, QgsMessageLog, Qgis
-from qgis.PyQt.QtCore import QSettings
-from .geoapi import (LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep,
-                     create_or_replace_main_group, add_basemap_layers, add_features_layers)
+from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
+from qgis.core import QgsApplication, QgsMessageLog, Qgis
+from .hazmapper_fetch_task import LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
+from .hazmapper_layers import (
+    add_basemap_layers,
+    add_features_layers,
+    create_main_group,
+    remove_previous_main_group
+)
 from .components.map_status import MapStatus
+from .components.project_selector import ProjectSelector
 
 from typing import Dict, Any, List, Optional, Union
 import traceback
@@ -19,10 +24,12 @@ class HazmapperPluginDockWidget(QDockWidget):
     def __init__(self, iface, plugin_dir, parent=None):
         super().__init__(parent)
 
+        self._step_data = {}
         self.active_task = None
-
         self.iface = iface
         self.plugin_dir = plugin_dir
+        self.current_project_url = None
+        self.main_group = None
 
         self.setWindowTitle("Hazmapper")
 
@@ -39,141 +46,130 @@ class HazmapperPluginDockWidget(QDockWidget):
         layout.setContentsMargins(6, 6, 6, 6)  # Smaller margins
         main_widget.setLayout(layout)
 
-        # --- URL Input Row ---
-        self.label_url = QLabel("URL:")
-        self.label_url.setMinimumWidth(30)  # Fixed small width
-        self.label_url.setToolTip(
-            "Paste a public Hazmapper project URL here.\nExample:\nhttps://hazmapper.tacc.utexas.edu/hazmapper/project-public/a1e0eb3a-8db7-4b2a-8412-80213841570b"
-        )
-
-        self.input_url = QLineEdit()
-        self.input_url.setPlaceholderText("Enter Hazmapper URL...")
-
-        self.button_refresh = QPushButton("Load")
-        self.button_refresh.setToolTip("Fetch data and layers from the Hazmapper project URL")
-
-        self.last_url = None
-
-        # URL row layout
-        url_row = QHBoxLayout()
-        url_row.setSpacing(4)  # Tighter spacing
-        url_row.addWidget(self.label_url)
-        url_row.addWidget(self.input_url, 1)  # Give input most space
-        url_row.addWidget(self.button_refresh)
-
-        layout.addLayout(url_row)
-
-        # React to changes in input
-        self.input_url.textChanged.connect(self.update_button_state)
-        self.input_url.returnPressed.connect(self.button_refresh.click)
+        # --- Project Selector Component ---
+        self.project_selector = ProjectSelector()
+        self.project_selector.load_requested.connect(self.handle_load_request)
+        layout.addWidget(self.project_selector)
 
         # --- Map Status Component (includes status + all metadata) ---
         self.map_status = MapStatus()
         layout.addWidget(self.map_status)
 
-        # --- Connect Logic ---
-        self.button_refresh.clicked.connect(self.handle_refresh)
+        layout.addStretch()
 
-        # Update from stored settings
-        saved_url = QSettings().value("HazmapperPlugin/last_project_url", "")
-        if saved_url:
-            self.input_url.setText(saved_url)
-            self.last_url = saved_url
-            self.update_button_state()
-
-    def update_button_state(self):
-        url = self.input_url.text().strip()
-
-        # Check if it's a public Hazmapper URL
-        if not url or "/project-public/" not in url:
-            self.button_refresh.setEnabled(False)
-            self.map_status.set_invalid_url()
-            return
-
-        # Enable button
-        self.button_refresh.setEnabled(True)
-
-        # Update button label
-        if url == self.last_url:
-            self.button_refresh.setText("Reload")
-        else:
-            self.button_refresh.setText("Load")
-            self.map_status.set_ready()
-
-    def update_status(self, geoapi_state, message):
-        if geoapi_state == GeoApiTaskState.RUNNING:
-            self.map_status.set_running()
-            self.button_refresh.setEnabled(False)
-        elif geoapi_state == GeoApiTaskState.DONE:
-            self.map_status.set_success("Hazmapper map loaded successfully.")
-            self.button_refresh.setEnabled(True)
-        elif geoapi_state == GeoApiTaskState.FAILED:
-            self.map_status.set_error(message)
-            self.button_refresh.setEnabled(True)
-        else:
-            self.map_status.set_error("Unknown state")
-            self.button_refresh.setEnabled(True)
-
-    def on_progress_data(self, geoapi_step: GeoApiStep,
-                         result: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]):
+    def handle_load_request(self, url, remove_previous_map):
+        """Handle load request from project selector"""
         try:
-            QgsMessageLog.logMessage(f"Processing: {str(geoapi_step)}", "Hazmapper", Qgis.Info)
-
-            if geoapi_step == GeoApiStep.PROJECT:
-                # Update all project metadata at once
-                self.map_status.update_project_data(
-                    name=result.get("name", "–"),
-                    description=result.get("description", "–"),
-                    url=self.last_url
-                )
-
-                # TODO should refactor this as assuming PROJECT is first thing
-                self.main_group = create_or_replace_main_group(
-                    project_name=result.get("name", "Unnamed"),
-                    project_uuid=result.get("uuid", "unknown")
-                )
-            elif geoapi_step == GeoApiStep.BASEMAP_LAYERS:
-                if self.main_group:
-                    add_basemap_layers(self.main_group, result)
-            elif geoapi_step == GeoApiStep.FEATURES:
-                if self.main_group:
-                    add_features_layers(self.main_group, result)
-        except Exception as e:
-            QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
-            self.update_status(GeoApiTaskState.FAILED, f"Unknown processing error during processing of {geoapi_step}")
-
-    def on_done(self):
-        """Callback triggered when the GeoAPI task finishes successfully."""
-        self.update_status(GeoApiTaskState.DONE, "Hazmapper map loaded successfully.")
-        self.iface.messageBar().pushMessage("Hazmapper", "Hazmapper map loaded successfully.", level=Qgis.Info)
-
-    def handle_refresh(self):
-        try:
-            # url is ready for parsing and validated in `update_button_state`
-            url = self.input_url.text().strip()
-            QgsMessageLog.logMessage(f"Loading map project: {url}", "Hazmapper", Qgis.Info)
             try:
                 uuid = url.split("/project-public/")[1].split("/")[0]
             except IndexError:
-                QgsMessageLog.logMessage("Error parsing url", "Hazmapper", Qgis.Critical)
+                QgsMessageLog.logMessage("Error parsing URL", "Hazmapper", Qgis.Critical)
                 self.update_status(GeoApiTaskState.FAILED, "Invalid project URL format.")
                 return
 
-            QSettings().setValue("HazmapperPlugin/last_project_url", url)
-            self.last_url = url
+            self.current_project_url = url
 
-            QgsMessageLog.logMessage(f"Starting task to load map project: {url}, uuid:{uuid}", "Hazmapper", Qgis.Info)
+            # Update UI state
+            self.project_selector.set_loading_state(True)
+            self.map_status.set_running()
 
-            # Kick off async task to get project
-            self.active_task = LoadGeoApiProjectTask(uuid,
-                                                     on_finished=self.on_done,
-                                                     update_status=self.update_status,
-                                                     on_progress_data=self.on_progress_data)
+            if remove_previous_map:
+                QgsMessageLog.logMessage(f"Remove previous map", "Hazmapper",
+                                         Qgis.Info)
+                remove_previous_main_group()
+
+            QgsMessageLog.logMessage(f"Starting task to load map project: {url}, uuid: {uuid}", "Hazmapper", Qgis.Info)
+
+            # Create async task to get map project data
+            self.active_task = LoadGeoApiProjectTask(uuid, base_url='https://hazmapper.tacc.utexas.edu/geoapi/projects')
+            # Connect signals
+            self.active_task.progress_data.connect(self.on_load_data)
+            self.active_task.status_update.connect(self.update_status)
+            self.active_task.task_done.connect(self.on_load_geoapi_project_done)
+
             added = QgsApplication.taskManager().addTask(self.active_task)
             QgsMessageLog.logMessage(f"Task added #{added}", "Hazmapper", Qgis.Info)
+
         except Exception:
             QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Critical)
             self.update_status(GeoApiTaskState.FAILED, "Error starting task")
+
+    def update_status(self, geoapi_state, message):
+        """Update status display and UI state"""
+        if geoapi_state == GeoApiTaskState.RUNNING:
+            self.map_status.set_running()
+            self.project_selector.set_loading_state(True)
+        elif geoapi_state == GeoApiTaskState.DONE:
+            self.map_status.set_success("Hazmapper map loaded successfully.")
+            self.project_selector.set_loading_state(False)
+        elif geoapi_state == GeoApiTaskState.FAILED:
+            self.map_status.set_error(message)
+            self.project_selector.set_loading_state(False)
+        else:
+            self.map_status.set_error("Unknown state")
+            self.project_selector.set_loading_state(False)
+
+    def on_load_data(self, geoapi_step: GeoApiStep,
+                     result: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]):
+        # Log incoming data
+        QgsMessageLog.logMessage(f"Received {geoapi_step} data", "Hazmapper", Qgis.Info)
+
+        # Store result
+        self._step_data[geoapi_step] = result
+
+        # Check if we have all required steps
+        required = {GeoApiStep.PROJECT, GeoApiStep.BASEMAP_LAYERS, GeoApiStep.FEATURES}
+        if required.issubset(self._step_data.keys()):
+            # Process once everything is ready
+            QgsMessageLog.logMessage(f"All data received; processing", "Hazmapper", Qgis.Info)
+            self._process_all_steps()
+
+    def _process_all_steps(self):
+        """Process project, basemaps, and features once all steps have arrived."""
+        project_data = self._step_data.get(GeoApiStep.PROJECT, {})
+        basemap_data = self._step_data.get(GeoApiStep.BASEMAP_LAYERS, [])
+        feature_data = self._step_data.get(GeoApiStep.FEATURES, [])
+
+        # Clear step data for next load
+        self._step_data.clear()
+
+        # Update project metadata + create group
+        def step1():
+            self.map_status.update_project_data(
+                name=project_data.get("name", "–"),
+                description=project_data.get("description", "–"),
+                url=self.current_project_url
+            )
+
+            self.main_group = create_main_group(
+                project_name=project_data.get("name", "Unnamed"),
+                project_uuid=project_data.get("uuid", "unknown"),
+            )
+
+            QgsMessageLog.logMessage("Created main group", "Hazmapper", Qgis.Info)
+            QTimer.singleShot(0, step2)
+
+        # Step 2: Add basemap layers
+        def step2():
+            add_basemap_layers(self.main_group, basemap_data)
+            QgsMessageLog.logMessage("Added basemap layers", "Hazmapper", Qgis.Info)
+            QTimer.singleShot(0, step3)
+
+        # Step 3: Add feature layers
+        def step3():
+            add_features_layers(self.main_group, feature_data)
+            QgsMessageLog.logMessage("Added feature layers", "Hazmapper", Qgis.Info)
+
+        # Start chain of processing steps
+        QTimer.singleShot(0, step1)
+
+    def on_load_geoapi_project_done(self, status: bool, message: str):
+        """Callback triggered when the GeoAPI task finishes successfully."""
+        if status:
+            self.update_status(GeoApiTaskState.DONE, "Hazmapper map loaded successfully.")
+            self.iface.messageBar().pushMessage("Hazmapper", "Hazmapper map loaded successfully.", level=Qgis.Info)
+        else:
+            self.update_status(GeoApiTaskState.FAILED, message)
 
     def closeEvent(self, event):
         self.closingPlugin.emit()

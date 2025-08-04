@@ -1,148 +1,87 @@
-from typing import Optional, Union, Dict, List, Any
-
 from qgis.core import (QgsTask, QgsMessageLog, Qgis,
                        QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
                        QgsFeature, QgsGeometry, QgsField, QgsFields)
-from PyQt5.QtCore import QVariant
+from PyQt5.QtCore import QVariant, QSettings
 from osgeo import ogr
-from urllib import request
 import json
-import traceback
-import uuid as py_uuid
+import uuid
 
-from .utils.user import get_or_create_guest_uuid
 from .utils.style import (
     apply_camera_icon_style,
     apply_point_cloud_style,
     apply_streetview_style
 )
 
-class GeoApiTaskState:
-    RUNNING = "running"
-    DONE = "done"
-    FAILED = "failed"
 
+from qgis.core import QgsProject, QgsLayerTreeGroup, QgsMessageLog, Qgis
+from qgis.PyQt.QtCore import QSettings
 
-class GeoApiStep:
-    PROJECT = "project"
-    BASEMAP_LAYERS = "basemap_layers"
-    FEATURES = "features"
+def remove_previous_main_group() -> None:
+    """
+    Safely remove Hazmapper project group and all its layers.
+    Must be called in GUI thread.
+    """
+    settings = QSettings()
+    internal_uuid = settings.value("HazmapperPlugin/internal_group_uuid", None)
 
+    if not internal_uuid:
+        QgsMessageLog.logMessage("[Hazmapper] No internal UUID set; nothing to remove.", "Hazmapper", Qgis.Info)
+        return
 
-class LoadGeoApiProjectTask(QgsTask):
-    def __init__(self, uuid, on_finished, update_status, on_progress_data):
-        super().__init__(f"Load Hazmapper project uuid-{uuid} task-uuid-{py_uuid.uuid4()}")
+    QgsMessageLog.logMessage(f"[Hazmapper] Removing group for internal UUID {internal_uuid}", "Hazmapper", Qgis.Info)
 
-        self.uuid = uuid
-        self.base_url = 'https://hazmapper.tacc.utexas.edu/geoapi/projects'
-        self.project_id = None
-        self.on_finished = on_finished
-        self.update_status = update_status
-        self.on_progress_data = on_progress_data
-        self.error = None
-
-    def _request_data_from_backend(self, endpoint, user_description, base=None) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
-        self.update_status(GeoApiTaskState.RUNNING, f"Fetching {user_description}...")
-
-        if base is None:
-            base = self.base_url
-        full_url = f"{base}{endpoint}"
-
-        headers = {
-            "X-Geoapi-Application": "QGIS",
-            "X-Geoapi-IsPublicView": "true", # currently
-            "X-Guest-Uuid": get_or_create_guest_uuid(),
-        }
-
-        # TODO: use QgsNetworkAccessManager instead of urllib
-
-        # Create request with headers used by hazmapper backend for metrics
-        req = request.Request(full_url, headers=headers)
-        try:
-            with request.urlopen(req) as response:
-                if response.status != 200:
-                    raise Exception(f"HTTP {response.status}")
-                return json.loads(response.read().decode())
-        except Exception as e:
-            self.error = f"Fetching {user_description} failed: {str(e)}"
-            QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
-            return None
-
-    def run(self):
-        QgsMessageLog.logMessage(f"Task to load map project started: uuid:{self.uuid}", "Hazmapper", Qgis.Info)
-
-        projects = self._request_data_from_backend(endpoint=f"/?uuid={self.uuid}",
-                                                   user_description="project metadata")
-        if not projects:
-            return False
-        else:
-            project = projects[0]
-            self.on_progress_data(GeoApiStep.PROJECT, project)
-            self.project_id = project.get("id")
-
-        # TODO Get DS info (link to DS project, and PRJ-124 number and project description
-        # uuid for making this call is derived from project-uuid in project.system_name
-        # https://www.designsafe-ci.org/api/projects/v2/159846449346309655-242ac119-0001-012/
-
-        basemap_layers = self._request_data_from_backend(endpoint=f"/{self.project_id}/tile-servers/",
-                                                         user_description="map data (basemap/tile layers)")
-        if not basemap_layers:
-            return False
-        else:
-            self.on_progress_data(GeoApiStep.BASEMAP_LAYERS, basemap_layers)
-
-        features = self._request_data_from_backend(endpoint=f"/{self.project_id}/features/?assetType=image,video,"
-                                                            f"point_cloud,streetview,questionnaire,no_asset_vector",
-                                                   user_description="map data (features")
-        if not features:
-            return False
-        else:
-            self.on_progress_data(GeoApiStep.FEATURES, features)
-
-        QgsMessageLog.logMessage(f"Task done: {self.uuid}", "Hazmapper", Qgis.Info)
-        return True
-
-
-    def finished(self, success):
-        QgsMessageLog.logMessage(f"Finished() called with success={success}", "Hazmapper", Qgis.Info)
-        if success:
-            QgsMessageLog.logMessage(f"Finished importing {self.uuid}", "Hazmapper", Qgis.Info)
-            self.update_status(GeoApiTaskState.DONE, "Finished fetching project.")
-        else:
-            self.update_status(GeoApiTaskState.FAILED, f"Failed fetching project: {self.error}")
-            QgsMessageLog.logMessage(self.error, "Hazmapper", Qgis.Critical)
-
-    def cancel(self):
-        # TODO
-        QgsMessageLog.logMessage("Task was cancelled", "Hazmapper", Qgis.Warning)
-        return True
-
-
-def create_or_replace_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup:
-    QgsMessageLog.logMessage(f"[Hazmapper] Removing existing main group", "Hazmapper", Qgis.Info)
     root = QgsProject.instance().layerTreeRoot()
+    if root is None:
+        QgsMessageLog.logMessage("No layer tree root available.", "Hazmapper", Qgis.Warning)
+        return
 
+    for child in list(root.children()):
+        if isinstance(child, QgsLayerTreeGroup) and child.customProperty("hazmapper_qgis_internal_group_uuid") == internal_uuid:
+            # Remove all layers first
+            for sublayer in child.findLayers():
+                layer = sublayer.layer()
+                if layer:
+                    QgsProject.instance().removeMapLayer(layer.id())
+
+            # Remove group node
+            root.removeChildNode(child)
+            QgsMessageLog.logMessage(f"[Hazmapper] Removed group with internal UUID {internal_uuid}", "Hazmapper", Qgis.Info)
+
+            # Clear UUID in settings to avoid stale reference
+            settings.remove("HazmapperPlugin/internal_group_uuid")
+            return
+
+    QgsMessageLog.logMessage(f"[Hazmapper] No group found for internal UUID {internal_uuid}", "Hazmapper", Qgis.Warning)
+
+
+def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup:
+    """
+    Create new Hazmapper project group at top of layer tree.
+
+    Returns:
+        QgsLayerTreeGroup: The newly created group
+    """
     try:
-        # Look for and remove any existing group with this UUID
-        for child in root.children():
-            if isinstance(child, QgsLayerTreeGroup) and child.customProperty("hazmapper_uuid") == project_uuid:
-                QgsMessageLog.logMessage(f"[Hazmapper] Removing existing group: {child.name()}", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(f"[Hazmapper] Creating main group", "Hazmapper", Qgis.Info)
 
-                # Remove all layers inside before removing the group
-                for sublayer in child.findLayers():
-                    QgsMessageLog.logMessage(f"[Hazmapper] Removing existing group2: {child.name()}", "Hazmapper", Qgis.Info)
-                    QgsProject.instance().removeMapLayer(sublayer.layerId())
-                QgsMessageLog.logMessage(f"[Hazmapper] Removing existing group3: {child.name()}", "Hazmapper", Qgis.Info)
-                root.removeChildNode(child)
-                break
+        internal_uuid = str(uuid.uuid4())
+        group_name = f"{project_name} ({project_uuid[:8]})"
+
+        root = QgsProject.instance().layerTreeRoot()
 
         # Create new group
-        group_name = f"{project_name} ({project_uuid[:8]})"
         group = QgsLayerTreeGroup(group_name)
-        group.setCustomProperty("hazmapper_uuid", project_uuid)
+
+        # Store identifiers for map's uuid and our own uuid for the qgis group
+        group.setCustomProperty("hazmapper_project_uuid", project_uuid)
+        group.setCustomProperty("hazmapper_qgis_internal_group_uuid", internal_uuid)
 
         root.insertChildNode(0, group)
-        QgsMessageLog.logMessage(f"[Hazmapper] Created new group: {group_name}", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(f"[Hazmapper] Created new group: {group_name} with internal UUID: {internal_uuid}",
+                                 "Hazmapper", Qgis.Info)
+        settings = QSettings()
+        settings.setValue("HazmapperPlugin/internal_group_uuid", internal_uuid)
+
         return group
 
     except Exception as e:
@@ -311,12 +250,7 @@ def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer
     layer.updateExtents()
     return layer
 
-
-
-
 def _set_feature_metadata(feature_or_layer, feature, asset):
     # Set metadata on QgsFeature or layer depending on type
     for k, v in asset.items():
         feature_or_layer.setCustomProperty(f"asset_{k}", v)
-
-
