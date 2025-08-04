@@ -37,7 +37,7 @@ class ProjectSelector(QWidget):
 
         # Add predefined projects
         for project in predefined_published_maps:
-            display_name = f"{project['projectName']} ({project['projectId']})"
+            display_name = f"{project['designSafeProjectName']} ({project['designSafeProjectId']})"
             self.project_dropdown.addItem(display_name, project['url'])
 
         self.project_dropdown.currentTextChanged.connect(self.on_selection_changed)
@@ -151,29 +151,6 @@ class ProjectSelector(QWidget):
         self.use_predefined.setEnabled(not is_loading)
         self.project_dropdown.setEnabled(not is_loading)
         self.input_url.setEnabled(not is_loading)
-
-    def get_project_info(self):
-        """Get info about currently selected project"""
-        url = self.get_current_url()
-
-        if self.use_predefined.isChecked():
-            # Find the project in predefined list
-            for project in predefined_published_maps:
-                if project['url'] == url:
-                    return {
-                        'url': url,
-                        'name': project['projectName'],
-                        'id': project['projectId'],
-                        'is_predefined': True
-                    }
-
-        # Manual URL or not found in predefined
-        return {
-            'url': url,
-            'name': None,
-            'id': None,
-            'is_predefined': False
-        }
 
     def _save_settings(self):
         """Save current settings to QSettings"""

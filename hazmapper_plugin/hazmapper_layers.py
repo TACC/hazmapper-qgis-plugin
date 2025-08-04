@@ -270,7 +270,9 @@ def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer
     layer.updateExtents()
     return layer
 
+
 def _set_feature_metadata(feature_or_layer, feature, asset):
     # Set metadata on QgsFeature or layer depending on type
     for k, v in asset.items():
         feature_or_layer.setCustomProperty(f"asset_{k}", v)
+
