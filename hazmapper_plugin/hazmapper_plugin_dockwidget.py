@@ -3,7 +3,8 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QWidget
 )
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
-from qgis.core import QgsApplication, QgsMessageLog, Qgis
+from qgis.core import QgsApplication, QgsMessageLog, Qgis, QgsNetworkAccessManager
+
 from .hazmapper_fetch_task import LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
 from .hazmapper_layers import (
     add_basemap_layers,
@@ -16,6 +17,37 @@ from .components.project_selector import ProjectSelector
 
 from typing import Dict, Any, List, Optional, Union
 import traceback
+
+
+def _setup_network_logger():
+    """Log network request errors (403, 404) to QGIS message log for debugging basemaps."""
+
+    def log_request(reply):
+        try:
+            # QGIS 3.32+ returns QgsNetworkReplyContent
+            if hasattr(reply, "request"):
+                url = reply.request().url().toString()
+            # Older QGIS returns QNetworkReply
+            elif hasattr(reply, "url"):
+                url = reply.url().toString()
+            else:
+                url = "<unknown>"
+
+            error_code = reply.error()
+
+            if error_code != 0:  # Only log failures
+                QgsMessageLog.logMessage(
+                    f"[Network] Tile request failed ({error_code}): {url}",
+                    "Hazmapper",
+                    Qgis.Warning
+                )
+        except Exception as e:
+            QgsMessageLog.logMessage(f"[Network] Failed to log request: {e}", "Hazmapper", Qgis.Warning)
+
+    QgsNetworkAccessManager.instance().finished.connect(log_request)
+
+# Log all network calls for debugging
+#_setup_network_logger()
 
 
 class HazmapperPluginDockWidget(QDockWidget):
