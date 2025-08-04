@@ -3,7 +3,8 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QWidget
 )
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
-from qgis.core import QgsApplication, QgsMessageLog, Qgis, QgsNetworkAccessManager
+from qgis.core import (QgsApplication, QgsMessageLog, Qgis, QgsNetworkAccessManager,
+                       QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProject)
 
 from .hazmapper_fetch_task import LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
 from .hazmapper_layers import (
@@ -192,8 +193,41 @@ class HazmapperPluginDockWidget(QDockWidget):
             add_features_layers(self.main_group, feature_data)
             QgsMessageLog.logMessage("Added feature layers", "Hazmapper", Qgis.Info)
 
+            # Zoom to features (ignore basemap layers with global extents)
+            self._zoom_to_main_group()
+
         # Start chain of processing steps
         QTimer.singleShot(0, step1)
+
+    def _zoom_to_main_group(self):
+        """Zoom to combined extent of feature layers inside main group (i.e. current map data)"""
+        extent = None
+
+        for child in self.main_group.children():
+            if child.nodeType() == child.NodeLayer:
+                layer = child.layer()
+                if layer and layer.type() == layer.VectorLayer:
+                    # Merge extents
+                    if extent is None:
+                        extent = layer.extent()
+                    else:
+                        extent.combineExtentWith(layer.extent())
+
+        if extent and not extent.isEmpty():
+            canvas_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
+
+            # Assume Hazmapper features are EPSG:4326 (set at creation)
+            layer_crs = QgsCoordinateReferenceSystem(4326)
+
+            if layer_crs != canvas_crs:
+                xform = QgsCoordinateTransform(layer_crs, canvas_crs, QgsProject.instance())
+                extent = xform.transformBoundingBox(extent)
+
+            self.iface.mapCanvas().setExtent(extent)
+            self.iface.mapCanvas().refresh()
+            QgsMessageLog.logMessage("Zoomed to Hazmapper features", "Hazmapper", Qgis.Info)
+        else:
+            QgsMessageLog.logMessage("No Hazmapper features to zoom to", "Hazmapper", Qgis.Info)
 
     def on_load_geoapi_project_done(self, status: bool, message: str):
         """Callback triggered when the GeoAPI task finishes successfully."""
