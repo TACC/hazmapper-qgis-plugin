@@ -109,27 +109,47 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 "Hazmapper", Qgis.Info
             )
 
-            #  Need to pick a,b,c for QGIS
+            # Handle subdomain placeholder (pick 'a' for QGIS)
             if "{s}" in url:
                 url = url.replace("{s}", "a")
 
             if layer_type == "tms" or (layer_type == "arcgis" and "/tiles/" in url):
-                if not url.endswith("/tile/{z}/{y}/{x}") and not "{z}/{x}/{y}" in url:
+                # Ensure tile path includes expected XYZ format
+                if not url.endswith("/tile/{z}/{y}/{x}") and "{z}/{x}/{y}" not in url:
                     tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
                 else:
                     tile_url = url
-                uri = f"type=xyz&url={tile_url}"
+
+                # TODO: Later, fetch actual min/max zoom from service metadata
+                uri = f"type=xyz&url={tile_url}&zmin=0&zmax=22"
             else:
                 QgsMessageLog.logMessage(f"Skipping unsupported layer type: {layer_type}", "Hazmapper", Qgis.Warning)
                 continue
 
-            # QGIS wants wms instead of xys TODO review what is going on here
+            # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
+            # This is a legacy naming convention in QGIS; 'wms' is used for both XYZ and WMS tile layers.
             raster_layer = QgsRasterLayer(uri, name, "wms")
+
+            # Validate layer
             if not raster_layer.isValid():
-                QgsMessageLog.logMessage(f"Failed to load layer: {name}", "Hazmapper", Qgis.Warning)
+                # Note: isValid() only checks URI/provider syntax. It does NOT verify that the
+                # tile URL responds correctly (e.g., 403/404). Network errors will appear only
+                # when tiles are actually requested/rendered.
+                QgsMessageLog.logMessage(f"Failed to load basemap layer: {name} (check URL)", "Hazmapper", Qgis.Warning)
                 continue
 
+            # Apply opacity
             raster_layer.setOpacity(opacity)
+
+            # Enable magnify/oversampling for smoother zoom beyond max LOD
+            if hasattr(raster_layer, "setZoomedInResamplingMethod"):
+                # Note: Per-layer magnify/resampling is available in QGIS 3.34+ only.
+                # On older versions (like 3.32), resampling must be set globally via QGIS Options.
+                raster_layer.resamplingEnabled = True
+                raster_layer.setZoomedInResamplingMethod(QgsRaster.ResamplingMethod.Nearest)
+                raster_layer.setZoomedInMagnificationFactor(4)
+
+            # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
             main_group.insertLayer(0, raster_layer)
 
