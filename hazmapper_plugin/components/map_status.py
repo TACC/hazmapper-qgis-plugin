@@ -73,7 +73,6 @@ class MapStatus(QWidget):
         layout.addLayout(grid)
         layout.addStretch()
 
-
     # Status update methods
     def update_status(self, icon, message):
         """Update the status display with new icon and message."""
@@ -113,7 +112,9 @@ class MapStatus(QWidget):
             self.map_value.setText(f'<a href="{url}">{url}</a>')
 
         # Update refresh time
-        self.refreshed_value.setText(QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm"))
+        self.refreshed_value.setText(
+            QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm")
+        )
 
     def clear_project_data(self):
         """Clear all project metadata."""

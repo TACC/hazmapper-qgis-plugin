@@ -3,9 +3,11 @@
  HazmapperPlugin
   A QGIS plugin to display Hazmapper map/project data using QGIS
  """
+
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
+
 # Initialize Qt resources from file resources.py
 from .resources import *
 
@@ -29,11 +31,10 @@ class HazmapperPlugin:
         self.plugin_dir = os.path.dirname(__file__)
 
         # initialize locale
-        locale = QSettings().value('locale/userLocale')[0:2]
+        locale = QSettings().value("locale/userLocale")[0:2]
         locale_path = os.path.join(
-            self.plugin_dir,
-            'i18n',
-            'HazmapperPlugin_{}.qm'.format(locale))
+            self.plugin_dir, "i18n", "HazmapperPlugin_{}.qm".format(locale)
+        )
 
         if os.path.exists(locale_path):
             self.translator = QTranslator()
@@ -42,7 +43,7 @@ class HazmapperPlugin:
 
         # Declare instance attributes
         self.actions = []
-        self.menu = self.tr(u'&Hazmapper')
+        self.menu = self.tr("&Hazmapper")
 
         self.pluginIsActive = False
         self.dockwidget = None
@@ -50,7 +51,7 @@ class HazmapperPlugin:
     # -------------------------------------------------------------------------
     # Translation helper
     def tr(self, message):
-        return QCoreApplication.translate('HazmapperPlugin', message)
+        return QCoreApplication.translate("HazmapperPlugin", message)
 
     # -------------------------------------------------------------------------
     # Toolbar/Menu Action Helper
@@ -64,9 +65,9 @@ class HazmapperPlugin:
         add_to_toolbar=True,
         status_tip=None,
         whats_this=None,
-        parent=None):
-        """Add a toolbar icon to the toolbar.
-        """
+        parent=None,
+    ):
+        """Add a toolbar icon to the toolbar."""
 
         icon = QIcon(icon_path)
         action = QAction(icon, text, parent)
@@ -93,14 +94,14 @@ class HazmapperPlugin:
     def initGui(self):
         """Create the toolbar button (Plugins toolbar only)."""
 
-        icon_path = ':/plugins/hazmapper_plugin/Hazmapper.svg'
+        icon_path = ":/plugins/hazmapper_plugin/Hazmapper.svg"
         self.add_action(
             icon_path,
-            text=self.tr(u'Hazmapper Tools'),
+            text=self.tr("Hazmapper Tools"),
             callback=self.toggle_dockwidget,  # Toggle instead of always run
             add_to_menu=False,
             add_to_toolbar=True,
-            parent=self.iface.mainWindow()
+            parent=self.iface.mainWindow(),
         )
 
     # -------------------------------------------------------------------------
@@ -123,8 +124,7 @@ class HazmapperPlugin:
         # If no dockwidget exists, create it
         if not self.dockwidget:
             self.dockwidget = HazmapperPluginDockWidget(
-                iface=self.iface,
-                plugin_dir=self.plugin_dir
+                iface=self.iface, plugin_dir=self.plugin_dir
             )
             self.dockwidget.closingPlugin.connect(self.onClosePlugin)
 

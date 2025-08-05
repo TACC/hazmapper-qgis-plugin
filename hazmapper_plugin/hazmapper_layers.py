@@ -1,6 +1,16 @@
-from qgis.core import (QgsTask, QgsMessageLog, Qgis,
-                       QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
-                       QgsFeature, QgsGeometry, QgsField, QgsFields)
+from qgis.core import (
+    QgsTask,
+    QgsMessageLog,
+    Qgis,
+    QgsProject,
+    QgsLayerTreeGroup,
+    QgsRasterLayer,
+    QgsVectorLayer,
+    QgsFeature,
+    QgsGeometry,
+    QgsField,
+    QgsFields,
+)
 from PyQt5.QtCore import QVariant, QSettings
 from osgeo import ogr
 import json
@@ -9,12 +19,13 @@ import uuid
 from .utils.style import (
     apply_camera_icon_style,
     apply_point_cloud_style,
-    apply_streetview_style
+    apply_streetview_style,
 )
 
 
 from qgis.core import QgsProject, QgsLayerTreeGroup, QgsMessageLog, Qgis
 from qgis.PyQt.QtCore import QSettings
+
 
 def remove_previous_main_group() -> None:
     """
@@ -25,18 +36,32 @@ def remove_previous_main_group() -> None:
     internal_uuid = settings.value("HazmapperPlugin/internal_group_uuid", None)
 
     if not internal_uuid:
-        QgsMessageLog.logMessage("[Hazmapper] No internal UUID set; nothing to remove.", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            "[Hazmapper] No internal UUID set; nothing to remove.",
+            "Hazmapper",
+            Qgis.Info,
+        )
         return
 
-    QgsMessageLog.logMessage(f"[Hazmapper] Removing group for internal UUID {internal_uuid}", "Hazmapper", Qgis.Info)
+    QgsMessageLog.logMessage(
+        f"[Hazmapper] Removing group for internal UUID {internal_uuid}",
+        "Hazmapper",
+        Qgis.Info,
+    )
 
     root = QgsProject.instance().layerTreeRoot()
     if root is None:
-        QgsMessageLog.logMessage("No layer tree root available.", "Hazmapper", Qgis.Warning)
+        QgsMessageLog.logMessage(
+            "No layer tree root available.", "Hazmapper", Qgis.Warning
+        )
         return
 
     for child in list(root.children()):
-        if isinstance(child, QgsLayerTreeGroup) and child.customProperty("hazmapper_qgis_internal_group_uuid") == internal_uuid:
+        if (
+            isinstance(child, QgsLayerTreeGroup)
+            and child.customProperty("hazmapper_qgis_internal_group_uuid")
+            == internal_uuid
+        ):
             # Remove all layers first
             for sublayer in child.findLayers():
                 layer = sublayer.layer()
@@ -45,13 +70,21 @@ def remove_previous_main_group() -> None:
 
             # Remove group node
             root.removeChildNode(child)
-            QgsMessageLog.logMessage(f"[Hazmapper] Removed group with internal UUID {internal_uuid}", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(
+                f"[Hazmapper] Removed group with internal UUID {internal_uuid}",
+                "Hazmapper",
+                Qgis.Info,
+            )
 
             # Clear UUID in settings to avoid stale reference
             settings.remove("HazmapperPlugin/internal_group_uuid")
             return
 
-    QgsMessageLog.logMessage(f"[Hazmapper] No group found for internal UUID {internal_uuid}", "Hazmapper", Qgis.Warning)
+    QgsMessageLog.logMessage(
+        f"[Hazmapper] No group found for internal UUID {internal_uuid}",
+        "Hazmapper",
+        Qgis.Warning,
+    )
 
 
 def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup:
@@ -62,7 +95,9 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
         QgsLayerTreeGroup: The newly created group
     """
     try:
-        QgsMessageLog.logMessage(f"[Hazmapper] Creating main group", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Creating main group", "Hazmapper", Qgis.Info
+        )
 
         internal_uuid = str(uuid.uuid4())
         group_name = f"{project_name} ({project_uuid[:8]})"
@@ -77,15 +112,22 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
         group.setCustomProperty("hazmapper_qgis_internal_group_uuid", internal_uuid)
 
         root.insertChildNode(0, group)
-        QgsMessageLog.logMessage(f"[Hazmapper] Created new group: {group_name} with internal UUID: {internal_uuid}",
-                                 "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Created new group: {group_name} with internal UUID: {internal_uuid}",
+            "Hazmapper",
+            Qgis.Info,
+        )
         settings = QSettings()
         settings.setValue("HazmapperPlugin/internal_group_uuid", internal_uuid)
 
         return group
 
     except Exception as e:
-        QgsMessageLog.logMessage(f"[Hazmapper] Error in create_or_replace_main_group: {str(e)}", "Hazmapper", Qgis.Critical)
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Error in create_or_replace_main_group: {str(e)}",
+            "Hazmapper",
+            Qgis.Critical,
+        )
         raise
 
 
@@ -106,7 +148,8 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 f"          URL: {url}\n"
                 f"          Tile Options: {layer_data.get('tileOptions')}\n"
                 f"          UI Options: {layer_data.get('uiOptions')}",
-                "Hazmapper", Qgis.Info
+                "Hazmapper",
+                Qgis.Info,
             )
 
             # Handle subdomain placeholder (pick 'a' for QGIS)
@@ -123,7 +166,11 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 # TODO: Later, fetch actual min/max zoom from service metadata
                 uri = f"type=xyz&url={tile_url}&zmin=0&zmax=22"
             else:
-                QgsMessageLog.logMessage(f"Skipping unsupported layer type: {layer_type}", "Hazmapper", Qgis.Warning)
+                QgsMessageLog.logMessage(
+                    f"Skipping unsupported layer type: {layer_type}",
+                    "Hazmapper",
+                    Qgis.Warning,
+                )
                 continue
 
             # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
@@ -135,7 +182,11 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 # Note: isValid() only checks URI/provider syntax. It does NOT verify that the
                 # tile URL responds correctly (e.g., 403/404). Network errors will appear only
                 # when tiles are actually requested/rendered.
-                QgsMessageLog.logMessage(f"Failed to load basemap layer: {name} (check URL)", "Hazmapper", Qgis.Warning)
+                QgsMessageLog.logMessage(
+                    f"Failed to load basemap layer: {name} (check URL)",
+                    "Hazmapper",
+                    Qgis.Warning,
+                )
                 continue
 
             # Apply opacity
@@ -146,7 +197,9 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 # Note: Per-layer magnify/resampling is available in QGIS 3.34+ only.
                 # On older versions (like 3.32), resampling must be set globally via QGIS Options.
                 raster_layer.resamplingEnabled = True
-                raster_layer.setZoomedInResamplingMethod(QgsRaster.ResamplingMethod.Nearest)
+                raster_layer.setZoomedInResamplingMethod(
+                    QgsRaster.ResamplingMethod.Nearest
+                )
                 raster_layer.setZoomedInMagnificationFactor(4)
 
             # Add layer to group (on top of stack)
@@ -156,7 +209,8 @@ def add_basemap_layers(main_group, layers: list[dict]):
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Error processing layer '{layer_data.get('name', 'unnamed')}': {str(e)}",
-                "Hazmapper", Qgis.Critical
+                "Hazmapper",
+                Qgis.Critical,
             )
 
 
@@ -205,9 +259,11 @@ def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
 
     # TODO handle other types of assets or just plain geometry
 
+
 def json_to_wkt(geometry_json: str) -> str:
     geom = ogr.CreateGeometryFromJson(geometry_json)
     return geom.ExportToWkt()
+
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     geom_type = feature["geometry"]["type"]
@@ -221,17 +277,13 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     provider.addAttributes(fields)
     layer.updateFields()
 
-
     # Build feature
     f = QgsFeature()
     geometry_json = json.dumps(feature["geometry"])
     f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(geometry_json)))
 
     asset = feature.get("assets", [{}])[0] or {}
-    f.setAttributes([
-        asset.get("asset_type", ""),
-        asset.get("display_path", "")
-    ])
+    f.setAttributes([asset.get("asset_type", ""), asset.get("display_path", "")])
 
     provider.addFeature(f)
     layer.updateExtents()
@@ -260,10 +312,7 @@ def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer
         f.setGeometry(geometry)
 
         # Set attributes
-        f.setAttributes([
-            asset.get("asset_type", ""),
-            asset.get("display_path", "")
-        ])
+        f.setAttributes([asset.get("asset_type", ""), asset.get("display_path", "")])
         features_to_add.append(f)
 
     provider.addFeatures(features_to_add)
@@ -275,4 +324,3 @@ def _set_feature_metadata(feature_or_layer, feature, asset):
     # Set metadata on QgsFeature or layer depending on type
     for k, v in asset.items():
         feature_or_layer.setCustomProperty(f"asset_{k}", v)
-

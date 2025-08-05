@@ -13,10 +13,10 @@ from optparse import OptionParser
 standard_library.install_aliases()
 
 # Configuration
-PROTOCOL = 'https'
-SERVER = 'plugins.qgis.org'
-PORT = '443'
-ENDPOINT = '/plugins/RPC2/'
+PROTOCOL = "https"
+SERVER = "plugins.qgis.org"
+PORT = "443"
+ENDPOINT = "/plugins/RPC2/"
 VERBOSE = False
 
 
@@ -32,15 +32,17 @@ def main(parameters, arguments):
         password=parameters.password,
         server=parameters.server,
         port=parameters.port,
-        endpoint=ENDPOINT)
+        endpoint=ENDPOINT,
+    )
     print("Connecting to: %s" % hide_password(address))
 
     server = xmlrpc.client.ServerProxy(address, verbose=VERBOSE)
 
     try:
-        with open(arguments[0], 'rb') as handle:
+        with open(arguments[0], "rb") as handle:
             plugin_id, version_id = server.plugin.upload(
-                xmlrpc.client.Binary(handle.read()))
+                xmlrpc.client.Binary(handle.read())
+            )
         print("Plugin ID: %s" % plugin_id)
         print("Version ID: %s" % version_id)
     except xmlrpc.client.ProtocolError as err:

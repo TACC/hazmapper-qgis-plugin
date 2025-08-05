@@ -9,7 +9,7 @@ from hazmapper_plugin.geoapi import (
     json_to_wkt,
     create_or_replace_main_group,
     add_basemap_layers,
-    add_features_layers
+    add_features_layers,
 )
 
 
@@ -26,7 +26,7 @@ class TestGeoApiUtilities(unittest.TestCase):
 
     def test_json_to_wkt_polygon(self):
         """Test JSON to WKT conversion for a polygon."""
-        geometry_json = '''
+        geometry_json = """
         {
             "type": "Polygon",
             "coordinates": [[
@@ -37,7 +37,7 @@ class TestGeoApiUtilities(unittest.TestCase):
                 [-97.7431, 30.2672]
             ]]
         }
-        '''
+        """
         wkt = json_to_wkt(geometry_json)
         self.assertIn("POLYGON", wkt)
 
@@ -55,17 +55,19 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
             uuid="test-uuid-123",
             on_finished=self.mock_on_finished,
             update_status=self.mock_update_status,
-            on_progress_data=self.mock_on_progress_data
+            on_progress_data=self.mock_on_progress_data,
         )
 
     def test_task_initialization(self):
         """Test task is properly initialized."""
         self.assertEqual(self.task.uuid, "test-uuid-123")
-        self.assertEqual(self.task.base_url, 'https://hazmapper.tacc.utexas.edu/geoapi/projects')
+        self.assertEqual(
+            self.task.base_url, "https://hazmapper.tacc.utexas.edu/geoapi/projects"
+        )
         self.assertIsNone(self.task.project_id)
         self.assertIsNone(self.task.error)
 
-    @patch('urllib.request.urlopen')
+    @patch("urllib.request.urlopen")
     def test_request_data_success(self, mock_urlopen):
         """Test successful data request."""
         # Mock response
@@ -77,9 +79,11 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         result = self.task._request_data_from_backend("/test", "test data")
 
         self.assertEqual(result, {"test": "data"})
-        self.mock_update_status.assert_called_with(GeoApiTaskState.RUNNING, "Fetching test data...")
+        self.mock_update_status.assert_called_with(
+            GeoApiTaskState.RUNNING, "Fetching test data..."
+        )
 
-    @patch('urllib.request.urlopen')
+    @patch("urllib.request.urlopen")
     def test_request_data_http_error(self, mock_urlopen):
         """Test HTTP error handling."""
         mock_response = Mock()
@@ -92,8 +96,7 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         self.assertIn("Fetching test data failed", self.task.error)
         self.assertIn("404", self.task.error)
 
-
-    @patch('urllib.request.urlopen')
+    @patch("urllib.request.urlopen")
     def test_request_data_network_error(self, mock_urlopen):
         """Test network error handling."""
         mock_urlopen.side_effect = urllib.error.URLError("Connection failed")
@@ -103,12 +106,12 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         self.assertIsNone(result)
         self.assertIn("Fetching test data failed", self.task.error)
 
-    @patch('urllib.request.urlopen')
+    @patch("urllib.request.urlopen")
     def test_request_data_json_error(self, mock_urlopen):
         """Test JSON parsing error handling."""
         mock_response = Mock()
         mock_response.status = 200
-        mock_response.read.return_value = b'invalid json'
+        mock_response.read.return_value = b"invalid json"
         mock_urlopen.return_value.__enter__.return_value = mock_response
 
         result = self.task._request_data_from_backend("/test", "test data")
@@ -116,14 +119,16 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         self.assertIsNone(result)
         self.assertIn("Fetching test data failed", self.task.error)
 
-    @patch.object(LoadGeoApiProjectTask, '_request_data_from_backend')
+    @patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
     def test_run_success(self, mock_request):
         """Test successful task run."""
         # Mock responses
         mock_request.side_effect = [
             [{"id": "project-123", "name": "Test Project"}],  # project metadata
-            [{"name": "Basemap", "type": "tms", "url": "http://example.com"}],  # basemap layers
-            {"features": [{"geometry": {"type": "Point"}, "assets": []}]}  # features
+            [
+                {"name": "Basemap", "type": "tms", "url": "http://example.com"}
+            ],  # basemap layers
+            {"features": [{"geometry": {"type": "Point"}, "assets": []}]},  # features
         ]
 
         result = self.task.run()
@@ -138,7 +143,7 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         self.assertEqual(calls[1][0][0], GeoApiStep.BASEMAP_LAYERS)
         self.assertEqual(calls[2][0][0], GeoApiStep.FEATURES)
 
-    @patch.object(LoadGeoApiProjectTask, '_request_data_from_backend')
+    @patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
     def test_run_project_fetch_failure(self, mock_request):
         """Test task run when project fetch fails."""
         mock_request.return_value = None
@@ -152,8 +157,7 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         self.task.finished(True)
 
         self.mock_update_status.assert_called_with(
-            GeoApiTaskState.DONE,
-            "Finished fetching project."
+            GeoApiTaskState.DONE, "Finished fetching project."
         )
 
     def test_finished_failure(self):
@@ -162,16 +166,15 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         self.task.finished(False)
 
         self.mock_update_status.assert_called_with(
-            GeoApiTaskState.FAILED,
-            "Failed fetching project: Test error message"
+            GeoApiTaskState.FAILED, "Failed fetching project: Test error message"
         )
 
 
 class TestIntegration(unittest.TestCase):
     """Integration tests with mocked QGIS components."""
 
-    @patch('hazmapper_plugin.geoapi.QgsProject')
-    @patch('hazmapper_plugin.geoapi.QgsLayerTreeGroup')
+    @patch("hazmapper_plugin.geoapi.QgsProject")
+    @patch("hazmapper_plugin.geoapi.QgsLayerTreeGroup")
     def test_create_or_replace_main_group_new(self, mock_tree_group, mock_project):
         """Test creating a new main group when none exists."""
         # Mock the QGIS project and layer tree
@@ -187,7 +190,9 @@ class TestIntegration(unittest.TestCase):
 
         # Verify the group was created and configured
         mock_tree_group.assert_called_once_with("Test Project (uuid-123)")
-        mock_group.setCustomProperty.assert_called_once_with("hazmapper_uuid", "uuid-123")
+        mock_group.setCustomProperty.assert_called_once_with(
+            "hazmapper_uuid", "uuid-123"
+        )
         mock_root.insertChildNode.assert_called_once_with(0, mock_group)
         self.assertEqual(result, mock_group)
 

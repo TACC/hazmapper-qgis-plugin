@@ -33,4 +33,5 @@ def classFactory(iface):  # pylint: disable=invalid-name
     """
     #
     from .hazmapper_plugin import HazmapperPlugin
+
     return HazmapperPlugin(iface)

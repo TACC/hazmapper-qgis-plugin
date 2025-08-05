@@ -1,6 +1,12 @@
 from qgis.PyQt.QtWidgets import (
-    QWidget, QLabel, QLineEdit, QPushButton, QComboBox,
-    QVBoxLayout, QHBoxLayout, QCheckBox
+    QWidget,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QComboBox,
+    QVBoxLayout,
+    QHBoxLayout,
+    QCheckBox,
 )
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QSettings
 from ..utils.maps_of_published_projects import predefined_published_maps
@@ -37,8 +43,10 @@ class ProjectSelector(QWidget):
 
         # Add predefined projects
         for project in predefined_published_maps:
-            display_name = f"{project['designSafeProjectName']} ({project['designSafeProjectId']})"
-            self.project_dropdown.addItem(display_name, project['url'])
+            display_name = (
+                f"{project['designSafeProjectName']} ({project['designSafeProjectId']})"
+            )
+            self.project_dropdown.addItem(display_name, project["url"])
 
         self.project_dropdown.currentTextChanged.connect(self.on_selection_changed)
         selection_layout.addWidget(self.project_dropdown)
@@ -75,7 +83,9 @@ class ProjectSelector(QWidget):
         # Replace previous checkbox
         self.replace_previous = QCheckBox("Replace previous map")
         self.replace_previous.setChecked(True)
-        self.replace_previous.setToolTip("Remove the previous Hazmapper project before loading the new one")
+        self.replace_previous.setToolTip(
+            "Remove the previous Hazmapper project before loading the new one"
+        )
         options_layout.addWidget(self.replace_previous)
 
         options_layout.addStretch()
@@ -155,12 +165,18 @@ class ProjectSelector(QWidget):
     def _save_settings(self):
         """Save current settings to QSettings"""
         settings = QSettings()
-        settings.setValue("HazmapperPlugin/use_predefined", self.use_predefined.isChecked())
+        settings.setValue(
+            "HazmapperPlugin/use_predefined", self.use_predefined.isChecked()
+        )
         settings.setValue("HazmapperPlugin/last_project_url", self.get_current_url())
-        settings.setValue("HazmapperPlugin/replace_previous", self.replace_previous.isChecked())
+        settings.setValue(
+            "HazmapperPlugin/replace_previous", self.replace_previous.isChecked()
+        )
 
         if self.use_predefined.isChecked():
-            settings.setValue("HazmapperPlugin/dropdown_index", self.project_dropdown.currentIndex())
+            settings.setValue(
+                "HazmapperPlugin/dropdown_index", self.project_dropdown.currentIndex()
+            )
         else:
             settings.setValue("HazmapperPlugin/manual_url", self.input_url.text())
 
@@ -169,7 +185,9 @@ class ProjectSelector(QWidget):
         settings = QSettings()
 
         # Restore mode (predefined vs manual)
-        use_predefined = settings.value("HazmapperPlugin/use_predefined", True, type=bool)
+        use_predefined = settings.value(
+            "HazmapperPlugin/use_predefined", True, type=bool
+        )
         self.use_predefined.setChecked(use_predefined)
 
         # Restore replace option

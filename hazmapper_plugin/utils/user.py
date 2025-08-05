@@ -1,6 +1,7 @@
 from qgis.PyQt.QtCore import QSettings
 import uuid
 
+
 def get_or_create_guest_uuid() -> str:
     settings = QSettings()
     key = "hazmapper/guest_uuid"

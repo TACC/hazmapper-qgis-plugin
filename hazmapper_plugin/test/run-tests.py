@@ -13,4 +13,3 @@ exit_code = pytest.main(["hazmapper_plugin/test"])
 # Cleanup
 qgs.exitQgis()
 sys.exit(exit_code)
-

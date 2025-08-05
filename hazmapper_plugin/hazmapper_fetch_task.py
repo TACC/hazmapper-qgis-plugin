@@ -1,16 +1,26 @@
 from typing import Optional, Union, Dict, List, Any
 
-from qgis.core import (QgsTask, QgsMessageLog, Qgis,
-                       QgsProject, QgsLayerTreeGroup, QgsRasterLayer, QgsVectorLayer,
-                       QgsFeature, QgsGeometry, QgsField, QgsFields)
+from qgis.core import (
+    QgsTask,
+    QgsMessageLog,
+    Qgis,
+    QgsProject,
+    QgsLayerTreeGroup,
+    QgsRasterLayer,
+    QgsVectorLayer,
+    QgsFeature,
+    QgsGeometry,
+    QgsField,
+    QgsFields,
+)
 from qgis.PyQt.QtCore import pyqtSignal
 
 from urllib import request
 import json
 import traceback
-import uuid as py_uuid
 
 from .utils.user import get_or_create_guest_uuid
+
 
 class GeoApiTaskState:
     RUNNING = "running"
@@ -36,8 +46,12 @@ class LoadGeoApiProjectTask(QgsTask):
         self.project_id = None
         self.error = None
 
-    def _request_data_from_backend(self, endpoint, user_description) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
-        self.status_update.emit(GeoApiTaskState.RUNNING, f"Fetching {user_description}...")
+    def _request_data_from_backend(
+        self, endpoint, user_description
+    ) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
+        self.status_update.emit(
+            GeoApiTaskState.RUNNING, f"Fetching {user_description}..."
+        )
 
         QgsMessageLog.logMessage(f"Fetching {user_description}", "Hazmapper", Qgis.Info)
 
@@ -45,7 +59,7 @@ class LoadGeoApiProjectTask(QgsTask):
 
         headers = {
             "X-Geoapi-Application": "QGIS",
-            "X-Geoapi-IsPublicView": "true", # currently
+            "X-Geoapi-IsPublicView": "true",  # currently
             "X-Guest-Uuid": get_or_create_guest_uuid(),
         }
 
@@ -64,10 +78,15 @@ class LoadGeoApiProjectTask(QgsTask):
             return None
 
     def run(self):
-        QgsMessageLog.logMessage(f"Task to load map project started: uuid:{self.uuid}", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            f"Task to load map project started: uuid:{self.uuid}",
+            "Hazmapper",
+            Qgis.Info,
+        )
 
-        projects = self._request_data_from_backend(endpoint=f"/?uuid={self.uuid}",
-                                                   user_description="project metadata")
+        projects = self._request_data_from_backend(
+            endpoint=f"/?uuid={self.uuid}", user_description="project metadata"
+        )
         if not projects:
             return False
         else:
@@ -79,38 +98,50 @@ class LoadGeoApiProjectTask(QgsTask):
         # uuid for making this call is derived from project-uuid in project.system_name
         # https://www.designsafe-ci.org/api/projects/v2/159846449346309655-242ac119-0001-012/
 
-        basemap_layers = self._request_data_from_backend(endpoint=f"/{self.project_id}/tile-servers/",
-                                                         user_description="map data (basemap/tile layers)")
+        basemap_layers = self._request_data_from_backend(
+            endpoint=f"/{self.project_id}/tile-servers/",
+            user_description="map data (basemap/tile layers)",
+        )
         if not basemap_layers:
             return False
         else:
             self.progress_data.emit(GeoApiStep.BASEMAP_LAYERS, basemap_layers)
 
-        features = self._request_data_from_backend(endpoint=f"/{self.project_id}/features/?assetType=image,video,"
-                                                            f"point_cloud,streetview,questionnaire,no_asset_vector",
-                                                   user_description="map data (features")
+        features = self._request_data_from_backend(
+            endpoint=f"/{self.project_id}/features/?assetType=image,video,"
+            f"point_cloud,streetview,questionnaire,no_asset_vector",
+            user_description="map data (features",
+        )
         if not features:
             return False
         else:
             self.progress_data.emit(GeoApiStep.FEATURES, features)
 
-        QgsMessageLog.logMessage(f"Fetch tasking done: {self.uuid}", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            f"Fetch tasking done: {self.uuid}", "Hazmapper", Qgis.Info
+        )
         return True
 
-
     def finished(self, success):
-        QgsMessageLog.logMessage(f"Finished task to fetch data (uuid={self.uuid}), called with success={success}", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            f"Finished task to fetch data (uuid={self.uuid}), called with success={success}",
+            "Hazmapper",
+            Qgis.Info,
+        )
         if success:
-            QgsMessageLog.logMessage(f"Finished fetching data (uuid={self.uuid})", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(
+                f"Finished fetching data (uuid={self.uuid})", "Hazmapper", Qgis.Info
+            )
             self.task_done.emit(True, "Finished fetching data")
         else:
-            QgsMessageLog.logMessage(f"Finished fetching data (uuid={self.uuid}), error: {self.error}", "Hazmapper", Qgis.Critical)
+            QgsMessageLog.logMessage(
+                f"Finished fetching data (uuid={self.uuid}), error: {self.error}",
+                "Hazmapper",
+                Qgis.Critical,
+            )
             self.task_done.emit(False, self.error)
 
     def cancel(self):
         # TODO
         QgsMessageLog.logMessage("Task was cancelled", "Hazmapper", Qgis.Warning)
         return True
-
-
-

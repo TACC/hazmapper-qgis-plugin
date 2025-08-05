@@ -1,17 +1,29 @@
 from qgis.PyQt.QtWidgets import (
-    QDockWidget, QLabel, QLineEdit, QPushButton,
-    QVBoxLayout, QHBoxLayout, QWidget
+    QDockWidget,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QVBoxLayout,
+    QHBoxLayout,
+    QWidget,
 )
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
-from qgis.core import (QgsApplication, QgsMessageLog, Qgis, QgsNetworkAccessManager,
-                       QgsCoordinateTransform, QgsCoordinateReferenceSystem, QgsProject)
+from qgis.core import (
+    QgsApplication,
+    QgsMessageLog,
+    Qgis,
+    QgsNetworkAccessManager,
+    QgsCoordinateTransform,
+    QgsCoordinateReferenceSystem,
+    QgsProject,
+)
 
 from .hazmapper_fetch_task import LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
 from .hazmapper_layers import (
     add_basemap_layers,
     add_features_layers,
     create_main_group,
-    remove_previous_main_group
+    remove_previous_main_group,
 )
 from .components.map_status import MapStatus
 from .components.project_selector import ProjectSelector
@@ -40,15 +52,18 @@ def _setup_network_logger():
                 QgsMessageLog.logMessage(
                     f"[Network] Tile request failed ({error_code}): {url}",
                     "Hazmapper",
-                    Qgis.Warning
+                    Qgis.Warning,
                 )
         except Exception as e:
-            QgsMessageLog.logMessage(f"[Network] Failed to log request: {e}", "Hazmapper", Qgis.Warning)
+            QgsMessageLog.logMessage(
+                f"[Network] Failed to log request: {e}", "Hazmapper", Qgis.Warning
+            )
 
     QgsNetworkAccessManager.instance().finished.connect(log_request)
 
+
 # Log all network calls for debugging
-#_setup_network_logger()
+# _setup_network_logger()
 
 
 class HazmapperPluginDockWidget(QDockWidget):
@@ -96,8 +111,12 @@ class HazmapperPluginDockWidget(QDockWidget):
             try:
                 uuid = url.split("/project-public/")[1].split("/")[0]
             except IndexError:
-                QgsMessageLog.logMessage("Error parsing URL", "Hazmapper", Qgis.Critical)
-                self.update_status(GeoApiTaskState.FAILED, "Invalid project URL format.")
+                QgsMessageLog.logMessage(
+                    "Error parsing URL", "Hazmapper", Qgis.Critical
+                )
+                self.update_status(
+                    GeoApiTaskState.FAILED, "Invalid project URL format."
+                )
                 return
 
             self.current_project_url = url
@@ -107,14 +126,19 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.map_status.set_running()
 
             if remove_previous_map:
-                QgsMessageLog.logMessage(f"Remove previous map", "Hazmapper",
-                                         Qgis.Info)
+                QgsMessageLog.logMessage(f"Remove previous map", "Hazmapper", Qgis.Info)
                 remove_previous_main_group()
 
-            QgsMessageLog.logMessage(f"Starting task to load map project: {url}, uuid: {uuid}", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(
+                f"Starting task to load map project: {url}, uuid: {uuid}",
+                "Hazmapper",
+                Qgis.Info,
+            )
 
             # Create async task to get map project data
-            self.active_task = LoadGeoApiProjectTask(uuid, base_url='https://hazmapper.tacc.utexas.edu/geoapi/projects')
+            self.active_task = LoadGeoApiProjectTask(
+                uuid, base_url="https://hazmapper.tacc.utexas.edu/geoapi/projects"
+            )
             # Connect signals
             self.active_task.progress_data.connect(self.on_load_data)
             self.active_task.status_update.connect(self.update_status)
@@ -142,8 +166,11 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.map_status.set_error("Unknown state")
             self.project_selector.set_loading_state(False)
 
-    def on_load_data(self, geoapi_step: GeoApiStep,
-                     result: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]):
+    def on_load_data(
+        self,
+        geoapi_step: GeoApiStep,
+        result: Optional[Union[Dict[str, Any], List[Dict[str, Any]]]],
+    ):
         # Log incoming data
         QgsMessageLog.logMessage(f"Received {geoapi_step} data", "Hazmapper", Qgis.Info)
 
@@ -154,7 +181,9 @@ class HazmapperPluginDockWidget(QDockWidget):
         required = {GeoApiStep.PROJECT, GeoApiStep.BASEMAP_LAYERS, GeoApiStep.FEATURES}
         if required.issubset(self._step_data.keys()):
             # Process once everything is ready
-            QgsMessageLog.logMessage(f"All data received; processing", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(
+                f"All data received; processing", "Hazmapper", Qgis.Info
+            )
             self._process_all_steps()
 
     def _process_all_steps(self):
@@ -171,7 +200,7 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.map_status.update_project_data(
                 name=project_data.get("name", "–"),
                 description=project_data.get("description", "–"),
-                url=self.current_project_url
+                url=self.current_project_url,
             )
 
             self.main_group = create_main_group(
@@ -220,20 +249,30 @@ class HazmapperPluginDockWidget(QDockWidget):
             layer_crs = QgsCoordinateReferenceSystem(4326)
 
             if layer_crs != canvas_crs:
-                xform = QgsCoordinateTransform(layer_crs, canvas_crs, QgsProject.instance())
+                xform = QgsCoordinateTransform(
+                    layer_crs, canvas_crs, QgsProject.instance()
+                )
                 extent = xform.transformBoundingBox(extent)
 
             self.iface.mapCanvas().setExtent(extent)
             self.iface.mapCanvas().refresh()
-            QgsMessageLog.logMessage("Zoomed to Hazmapper features", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(
+                "Zoomed to Hazmapper features", "Hazmapper", Qgis.Info
+            )
         else:
-            QgsMessageLog.logMessage("No Hazmapper features to zoom to", "Hazmapper", Qgis.Info)
+            QgsMessageLog.logMessage(
+                "No Hazmapper features to zoom to", "Hazmapper", Qgis.Info
+            )
 
     def on_load_geoapi_project_done(self, status: bool, message: str):
         """Callback triggered when the GeoAPI task finishes successfully."""
         if status:
-            self.update_status(GeoApiTaskState.DONE, "Hazmapper map loaded successfully.")
-            self.iface.messageBar().pushMessage("Hazmapper", "Hazmapper map loaded successfully.", level=Qgis.Info)
+            self.update_status(
+                GeoApiTaskState.DONE, "Hazmapper map loaded successfully."
+            )
+            self.iface.messageBar().pushMessage(
+                "Hazmapper", "Hazmapper map loaded successfully.", level=Qgis.Info
+            )
         else:
             self.update_status(GeoApiTaskState.FAILED, message)
 
