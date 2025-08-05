@@ -2,6 +2,8 @@
 
 This QGIS plugin allows users to connect to **Hazmapper**, a geospatial data platform hosted on the DesignSafe cyberinfrastructure. It enables visualization and interaction with datasets managed via the GEOAPI backend.
 
+![demo](https://github.com/user-attachments/assets/1e5d81cc-f69e-494a-9cf7-6bd9120264c0
+
 ## Features
 
 - Browse and load Hazmapper projects directly into QGIS
