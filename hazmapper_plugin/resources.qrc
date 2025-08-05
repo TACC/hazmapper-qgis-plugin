@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/plugins/hazmapper_plugin" >
+        <file>Hazmapper-Stack.svg</file>
+        <file>Hazmapper.svg</file>
+    </qresource>
+</RCC>
