@@ -115,7 +115,7 @@ class ProjectSelector(QWidget):
         url = self.get_current_url()
 
         # Check if it's a valid Hazmapper URL
-        is_valid = url and "/project-public/" in url
+        is_valid = bool(url and "/project-public/" in url)
         self.button_load.setEnabled(is_valid)
 
         if is_valid:
