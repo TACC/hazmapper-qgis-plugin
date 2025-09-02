@@ -120,7 +120,7 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
 
     except Exception as e:
         QgsMessageLog.logMessage(
-            f"[Hazmapper] Error in create_or_replace_main_group: {str(e)}",
+            f"[Hazmapper] Error in create_main_group: {str(e)}",
             "Hazmapper",
             Qgis.Critical,
         )

@@ -40,7 +40,7 @@ class LoadGeoApiProjectTask(QgsTask):
 
     def _request_data_from_backend(
         self, endpoint, user_description
-    ) -> Optional[Union[Dict[str, Any], List[Dict[str, Any]]]]:
+    ) -> Optional[List[Dict[str, Any]]]:
         self.status_update.emit(
             GeoApiTaskState.RUNNING, f"Fetching {user_description}..."
         )

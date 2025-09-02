@@ -3,7 +3,7 @@ name = "hazmapper-qgis-plugin"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.9,<3.13"
 dependencies = []
 
 [dependency-groups]
@@ -14,6 +14,14 @@ dev = [
     "pytest>=8.4.1",
 ]
 
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["hazmapper_plugin*"]
+
 [tool.flake8]
 max-line-length = 100
 extend-ignore = [
@@ -21,3 +29,25 @@ extend-ignore = [
   "W503"   # line break before binary operator (needed for Black compatibility)
 ]
 
+[tool.pytest.ini_options]
+markers = [
+  "qgis_required: test needs real QGIS runtime",
+  "no_qgis_required: test does not need QGIS runtime"
+]
+
+[tool.mypy]
+python_version = "3.9"
+strict = false
+warn_unused_ignores = true
+no_implicit_optional = true
+check_untyped_defs = true
+disallow_any_generics = false
+ignore_missing_imports = false
+# Exclude auto-generated Qt resource modules
+exclude = "(^|.*/)(resources(_rc)?\\.py|help/source/.*)$"
+
+# Tell mypy to ignore/stub-skip 3rd-party modules without types
+[[tool.mypy.overrides]]
+module = ["qgis", "qgis.*", "PyQt5", "PyQt5.*", "osgeo", "osgeo.*"]
+ignore_missing_imports = true
+follow_imports = "skip"

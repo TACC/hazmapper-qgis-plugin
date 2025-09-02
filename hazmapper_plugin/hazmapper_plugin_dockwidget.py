@@ -226,6 +226,9 @@ class HazmapperPluginDockWidget(QDockWidget):
 
     def _zoom_to_main_group(self):
         """Zoom to combined extent of feature layers inside main group (i.e. current map data)"""
+        if self.main_group is None:
+            return  # nothing to zoom to
+
         extent = None
 
         for child in self.main_group.children():
