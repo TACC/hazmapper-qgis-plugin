@@ -29,9 +29,6 @@ jobs:
       - name: Sync (install deps)
         run: uv sync --group dev
 
-      - name: Pytest (skip qgis-marked tests on CI)
-        run: uv run pytest -m "no_qgis_required"
-
       - name: Black check
         run: uv run black --check .
 

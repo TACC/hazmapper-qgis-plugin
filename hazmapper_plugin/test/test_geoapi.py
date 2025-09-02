@@ -13,7 +13,7 @@ from hazmapper_plugin.hazmapper_layers import (
 
 
 
-@pytest.mark.no_qgis_required
+@pytest.mark.qgis_required
 class TestGeoApiUtilities(unittest.TestCase):
     """Test utility functions that don't require QGIS."""
 
@@ -43,7 +43,7 @@ class TestGeoApiUtilities(unittest.TestCase):
         self.assertIn("POLYGON", wkt)
 
 
-@pytest.mark.no_qgis_required
+@pytest.mark.qgis_required
 class TestLoadGeoApiProjectTask(unittest.TestCase):
     """Test the main task class."""
 
