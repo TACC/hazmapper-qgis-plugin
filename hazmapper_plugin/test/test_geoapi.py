@@ -4,13 +4,14 @@ from unittest.mock import Mock, patch, ANY
 import urllib.error
 
 from hazmapper_plugin.hazmapper_fetch_task import (
-    LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
+    LoadGeoApiProjectTask,
+    GeoApiTaskState,
+    GeoApiStep,
 )
 from hazmapper_plugin.hazmapper_layers import (
     json_to_wkt,
     create_main_group,
 )
-
 
 
 @pytest.mark.qgis_required
@@ -78,7 +79,9 @@ class TestLoadGeoApiProjectTask(unittest.TestCase):
         result = self.task._request_data_from_backend("/test", "test data")
 
         self.assertEqual(result, {"test": "data"})
-        self.on_status.assert_called_with(GeoApiTaskState.RUNNING, "Fetching test data...")
+        self.on_status.assert_called_with(
+            GeoApiTaskState.RUNNING, "Fetching test data..."
+        )
 
     @patch("urllib.request.urlopen")
     def test_request_data_http_error(self, mock_urlopen):
@@ -170,8 +173,12 @@ class TestIntegration(unittest.TestCase):
 
         mock_tree_group.assert_called_once_with("Test Project (uuid-123)")
         # Expect two calls with specific keys; second value can be anything (uuid)
-        mock_group.setCustomProperty.assert_any_call("hazmapper_project_uuid", "uuid-123")
-        mock_group.setCustomProperty.assert_any_call("hazmapper_qgis_internal_group_uuid", ANY)
+        mock_group.setCustomProperty.assert_any_call(
+            "hazmapper_project_uuid", "uuid-123"
+        )
+        mock_group.setCustomProperty.assert_any_call(
+            "hazmapper_qgis_internal_group_uuid", ANY
+        )
 
         mock_root.insertChildNode.assert_called_once_with(0, mock_group)
         self.assertIs(result, mock_group)
