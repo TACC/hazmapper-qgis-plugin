@@ -22,6 +22,9 @@ build-backend = "setuptools.build_meta"
 where = ["."]
 include = ["hazmapper_plugin*"]
 
+[tool.setuptools.package-data]
+hazmapper_plugin = ["icons/*.svg"]
+
 [tool.flake8]
 max-line-length = 100
 extend-ignore = [
@@ -34,6 +37,13 @@ markers = [
   "qgis_required: test needs real QGIS runtime",
   "no_qgis_required: test does not need QGIS runtime"
 ]
+
+[tool.black]
+extend-exclude = '''
+(
+  hazmapper_plugin/resources_rc.py
+)
+'''
 
 [tool.mypy]
 python_version = "3.9"

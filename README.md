@@ -50,13 +50,6 @@ Instead if linking, You can also copy hazmapper_plugin/ into your QGIS plugins f
 
 ## Development notes
 
-If you make changes to icons or update `resources.qrc`, you must recompile the resources file:
-
-```bash
-cd hazmapper_plugin
-pyrcc5 -o resources_rc.py resources.qrc
-```
-
 ### One-time setup
 
 ```

@@ -27,7 +27,7 @@ tags=
 
 homepage=https://www.designsafe-ci.org/user-guide/tools/visualization/#hazmapper-user-guide
 category=Plugins
-icon=Hazmapper.svg
+icon=icons/Hazmapper.svg
 # experimental flag
 experimental=True
 
