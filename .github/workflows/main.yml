@@ -36,7 +36,7 @@ jobs:
 
   qgis-integration:
     runs-on: ubuntu-latest
-    needs: test-and-lint
+    needs: lint-type-format-checks
     strategy:
       fail-fast: false
       matrix:
