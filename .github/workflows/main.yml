@@ -5,7 +5,7 @@ on:
   pull_request:
 
 jobs:
-  test-and-lint:
+  lint-type-format-checks:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
