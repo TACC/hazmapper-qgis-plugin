@@ -4,14 +4,6 @@ from qgis.core import (
     QgsTask,
     QgsMessageLog,
     Qgis,
-    QgsProject,
-    QgsLayerTreeGroup,
-    QgsRasterLayer,
-    QgsVectorLayer,
-    QgsFeature,
-    QgsGeometry,
-    QgsField,
-    QgsFields,
 )
 from qgis.PyQt.QtCore import pyqtSignal
 

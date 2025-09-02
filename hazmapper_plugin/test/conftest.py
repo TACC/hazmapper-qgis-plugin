@@ -1,6 +1,5 @@
 import pytest
 import json
-import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
@@ -35,15 +34,13 @@ def features_data(test_data_dir):
 @pytest.fixture
 def mock_qgis_environment():
     """Mock the entire QGIS environment for testing."""
-    with patch("hazmapper_plugin.geoapi.QgsProject") as mock_project, patch(
-        "hazmapper_plugin.geoapi.QgsRasterLayer"
-    ) as mock_raster_layer, patch(
-        "hazmapper_plugin.geoapi.QgsVectorLayer"
-    ) as mock_vector_layer, patch(
-        "hazmapper_plugin.geoapi.QgsLayerTreeGroup"
-    ) as mock_tree_group, patch(
-        "hazmapper_plugin.geoapi.QgsMessageLog"
-    ) as mock_log:
+    with (
+        patch("hazmapper_plugin.geoapi.QgsProject") as mock_project,
+        patch("hazmapper_plugin.geoapi.QgsRasterLayer") as mock_raster_layer,
+        patch("hazmapper_plugin.geoapi.QgsVectorLayer") as mock_vector_layer,
+        patch("hazmapper_plugin.geoapi.QgsLayerTreeGroup") as mock_tree_group,
+        patch("hazmapper_plugin.geoapi.QgsMessageLog") as mock_log,
+    ):
 
         # Mock project instance
         mock_project_instance = Mock()

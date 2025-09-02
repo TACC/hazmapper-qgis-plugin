@@ -1,5 +1,4 @@
 from qgis.core import (
-    QgsTask,
     QgsMessageLog,
     Qgis,
     QgsProject,
@@ -8,6 +7,7 @@ from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
     QgsGeometry,
+    QgsRaster,
     QgsField,
     QgsFields,
 )
@@ -21,10 +21,6 @@ from .utils.style import (
     apply_point_cloud_style,
     apply_streetview_style,
 )
-
-
-from qgis.core import QgsProject, QgsLayerTreeGroup, QgsMessageLog, Qgis
-from qgis.PyQt.QtCore import QSettings
 
 
 def remove_previous_main_group() -> None:
@@ -96,7 +92,7 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
     """
     try:
         QgsMessageLog.logMessage(
-            f"[Hazmapper] Creating main group", "Hazmapper", Qgis.Info
+            "[Hazmapper] Creating main group", "Hazmapper", Qgis.Info
         )
 
         internal_uuid = str(uuid.uuid4())
@@ -174,7 +170,8 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 continue
 
             # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
-            # This is a legacy naming convention in QGIS; 'wms' is used for both XYZ and WMS tile layers.
+            # This is a legacy naming convention in QGIS; 'wms' is used
+            # for both XYZ and WMS tile layers.
             raster_layer = QgsRasterLayer(uri, name, "wms")
 
             # Validate layer

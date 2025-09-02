@@ -8,7 +8,7 @@ from qgis.PyQt.QtWidgets import (
     QHBoxLayout,
     QCheckBox,
 )
-from qgis.PyQt.QtCore import Qt, pyqtSignal, QSettings
+from qgis.PyQt.QtCore import pyqtSignal, QSettings
 from ..utils.maps_of_published_projects import predefined_published_maps
 
 
@@ -58,7 +58,9 @@ class ProjectSelector(QWidget):
         self.label_url = QLabel("URL:")
         self.label_url.setMinimumWidth(30)
         self.label_url.setToolTip(
-            "Paste a public Hazmapper project URL here.\nExample:\nhttps://hazmapper.tacc.utexas.edu/hazmapper/project-public/a1e0eb3a-8db7-4b2a-8412-80213841570b"
+            "Paste a public Hazmapper project URL here.\n"
+            "Example:\n"
+            "https://hazmapper.tacc.utexas.edu/hazmapper/project-public/a1e0eb3a-8db7-4b2a-8412-80213841570b"  # noqa: E501
         )
 
         self.input_url = QLineEdit()

@@ -1,0 +1,23 @@
+[project]
+name = "hazmapper-qgis-plugin"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "flake8>=7.1.0",
+    "mypy>=1.17.1",
+    "pytest>=8.4.1",
+]
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = [
+  "E203",  # whitespace before ':' (needed for Black compatibility)
+  "W503"   # line break before binary operator (needed for Black compatibility)
+]
+
