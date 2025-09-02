@@ -12,7 +12,6 @@ from qgis.core import (
     QgsFields,
 )
 from PyQt5.QtCore import QVariant, QSettings
-from osgeo import ogr
 import json
 import uuid
 
@@ -21,6 +20,7 @@ from .utils.style import (
     apply_point_cloud_style,
     apply_streetview_style,
 )
+from .utils.geometry import json_to_wkt
 
 
 def remove_previous_main_group() -> None:
@@ -255,11 +255,6 @@ def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
         main_group.insertLayer(0, vl)
 
     # TODO handle other types of assets or just plain geometry
-
-
-def json_to_wkt(geometry_json: str) -> str:
-    geom = ogr.CreateGeometryFromJson(geometry_json)
-    return geom.ExportToWkt()
 
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:

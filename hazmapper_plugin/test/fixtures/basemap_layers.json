@@ -1,0 +1,16 @@
+[
+  {
+    "name": "OpenStreetMap",
+    "type": "tms",
+    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "zmin": 0,
+    "zmax": 19
+  },
+  {
+    "name": "Imagery",
+    "type": "arcgis",
+    "url": "https://example.com/arcgis/rest/services/World_Imagery/MapServer",
+    "zmin": 0,
+    "zmax": 20
+  }
+]
