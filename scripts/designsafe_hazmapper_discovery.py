@@ -5,6 +5,7 @@ Script to discover all DesignSafe projects with Hazmapper maps and generate conf
 
 import argparse
 import json
+import os
 import requests
 import time
 from typing import List, Dict, Optional
@@ -23,7 +24,7 @@ def get_all_projects(short_version: bool = False) -> List[Dict]:
     limit = 100  # Use smaller batches to be respectful
     max_projects = 100 if short_version else None
     
-    print(f"Fetching projects from DesignSafe{'(short version - 100 projects)' if short_version else ''}...")
+    print(f"Fetching projects from DesignSafe{' (short version - 100 projects)' if short_version else ''}...")
     
     while True:
         url = f"{base_url}?offset={offset}&limit={limit}"
@@ -160,6 +161,11 @@ predefined_published_maps = [
     config_content += ''']
 '''
     
+    # Ensure the output directory exists
+    output_dir = os.path.dirname(output_file)
+    if output_dir and not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+    
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(config_content)
     
@@ -215,6 +221,7 @@ def main():
     """
     parser = argparse.ArgumentParser(description='Discover DesignSafe projects with Hazmapper maps')
     parser.add_argument('--short', action='store_true', help='Run short version with only 100 projects')
+    parser.add_argument('--python_output_location', default='.', help='Directory to save the Python config file (default: current directory)')
     args = parser.parse_args()
     
     print("Starting DesignSafe Hazmapper discovery...")
@@ -287,7 +294,9 @@ def main():
     
     # Step 3: Generate configuration file and README
     if projects_with_maps:
-        generate_config_file(projects_with_maps)
+        # Create Python config file path
+        python_output_path = os.path.join(args.python_output_location, "maps_of_published_projects.py")
+        generate_config_file(projects_with_maps, python_output_path)
         generate_readme(projects_with_maps)
         print(f"\nGenerated configuration file with {len(projects_with_maps)} projects")
     else:
