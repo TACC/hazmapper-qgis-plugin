@@ -1,122 +1,69 @@
 [
   {
-    "projectId": "PRJ-5815",
-    "title": "Infrastructure Resilience and Impact Study for Wildfire-affected Infrastructure in Los Angeles",
+    "projectId": "PRJ-2109",
+    "title": "GEER - M6.6 Hokkaido, Japan",
     "hazmapperMaps": [
       {
-        "name": "Los Angeles Fires",
+        "name": "GEER Hokkaido",
         "path": "/",
-        "uuid": "f051fdc3-7121-41c6-8930-3dee73eeea4d",
-        "deployment": "production"
+        "uuid": "5bbf8d4e-26aa-4ea8-a11d-2f21264fd198",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1023,
+        "hazmapper_name": "GEER: M6.6 Hokkaido",
+        "hazmapper_description": "Reconnaissance data of the September 2018 M6.6 Eastern Iburi Earthquake in Japan."
       }
     ]
   },
   {
-    "projectId": "PRJ-5857",
-    "title": "GEER - 2025 Los Angeles Wildfires",
+    "projectId": "PRJ-2170",
+    "title": "GEER - Hurricane Florence",
     "hazmapperMaps": [
       {
-        "name": "PRJ-5857 GEER - 2025 Los Angeles Wildfires",
+        "name": "GEER/RAPID: Hurricane Florence",
         "path": "/",
-        "uuid": "ddd250f3-f2cc-4d5f-8657-b1501ce1b2d1",
-        "deployment": "production"
+        "uuid": "e183173f-5f84-411b-829f-72fb6f3276f7",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1019,
+        "hazmapper_name": "GEER/RAPID: Hurricane Florence",
+        "hazmapper_description": "Hurricane Florence reconnaissance data, collected by GEER and the RAPID Facility."
       }
     ]
   },
   {
-    "projectId": "PRJ-5649",
-    "title": "Elwha River Delta Shoreline Morphology Surveys",
+    "projectId": "PRJ-2277",
+    "title": "Camp Wildfires Reconnaissance-Spring 2019",
     "hazmapperMaps": [
       {
-        "name": "Elwha River Mouth Survey",
+        "name": "GEER_CampWildFires, CA",
         "path": "/",
-        "uuid": "f1b922ba-a116-4a9f-9a99-c36fd63f6ade",
-        "deployment": "production"
+        "uuid": "a1e0eb3a-8db7-4b2a-8412-80213841570b",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 793,
+        "hazmapper_name": "GEER_CampWildFires, CA",
+        "hazmapper_description": "Data from the 2018 GEER reconnaissance mission to CA in response to the Camp Wildfire."
       }
     ]
   },
   {
-    "projectId": "PRJ-3963",
-    "title": "Skagway Landslide Hazard",
+    "projectId": "PRJ-2714",
+    "title": "RAPID: Multi-Hazard Damage to Puerto Rico\u2019s Infrastructure - Investigation of the Interaction of Hurricane and Earthquakes",
     "hazmapperMaps": [
       {
-        "name": "Skagway Rock Slide Hazard",
-        "path": "/RApp",
-        "uuid": "a4f72444-72fb-40f6-a3a4-07676d165e33",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-5667",
-    "title": "Multidisciplinary Pre, During and Post Storm Data Collection. ",
-    "hazmapperMaps": [
-      {
-        "name": "NEER_HurricaneHelene",
+        "name": "Multi-Hazard Damage to Puerto Rico\u2019s Infrastructure - Investigation of the Interaction of Hurricane and Earthquakes",
         "path": "/",
-        "uuid": "ab6ff746-6252-489c-b399-29e645cd0a0d",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-4211",
-    "title": "StEER/RAPID: Hurricane Ian",
-    "hazmapperMaps": [
-      {
-        "name": "Hurricane Ian RAPID UAV Imagery",
-        "path": "/",
-        "uuid": "7073c5aa-3ec8-499d-99ac-11548709a54f",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-4690",
-    "title": "RAPID Scholar: Post-Flood Recovery and Mitigation in Montpelier and Barre, Vermont",
-    "hazmapperMaps": [
-      {
-        "name": "MontpelierVTFloodMitigation",
-        "path": "/",
-        "uuid": "a0d3b385-74bc-4d1f-9e55-ec385fc1900e",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-4550",
-    "title": "GEER Lidar Data from the 2023 Kahramanmaras Earthquake Sequence Reconnaissance",
-    "hazmapperMaps": [
-      {
-        "name": "2023 GEER Kahramanmaras Earthquake Sequence Reconnaissance: Cay District, Iskenderun, Hatay",
-        "path": "/Building B (36.5902, 36.1771)",
-        "uuid": "76a908cd-d8bb-4d1c-8dd9-b66526e6d845",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-4010",
-    "title": "East African Cyclone Flooding - Mozambique",
-    "hazmapperMaps": [
-      {
-        "name": "East Africa Cyclone Flooding - Mozambique",
-        "path": "/",
-        "uuid": "6a7abcb1-c319-4881-934a-2bf08089e624",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-2870",
-    "title": "COPE: EAGER Coastal Hazard Planning in Time",
-    "hazmapperMaps": [
-      {
-        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/be980681-17c8-428a-92fd-eec86e9de773",
-        "name": "COPE: EAGER Coastal Hazard Planning in Time",
-        "path": "/",
-        "uuid": "be980681-17c8-428a-92fd-eec86e9de773",
-        "deployment": "production"
+        "uuid": "1260cfdc-00c5-42d2-ab4b-ac498b24e44c",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 833,
+        "hazmapper_name": "Multi-Hazard Damage to Puerto Rico Infrastructure - Investigation of the Interaction of Hurricane and Earthquakes",
+        "hazmapper_description": "This project aims to identify the compounding impacts of 2017 Hurricane Maria and the 2020 Earthquake series. Traditionally, post-disaster damage assessment activities focus on one hazard and overlook the potentially destructive cascading effects of multiple hazards on structures and infrastructure. This project provides data resulting from field reconnaissance emphasizing multi-hazard effects and interactions. The data set includes geotagged pictures, Lidar scans, 360 degree videos and images, UAS videos and images from a first wave of field investigation. Infrastructure surveyed includes port facilities, buildings (particularly historical structures), and bridge infrastructure. This data can be used to understand how the impacts of Hurricane Maria, along with infrastructure aging and delayed recovery or repair activities, may have influenced the damage level and failure modes observed during the earthquake sequence."
       }
     ]
   },
@@ -129,160 +76,30 @@
         "name": "20200303_MiddleTN_Tornadoes",
         "path": "/",
         "uuid": "2e34d8c9-d346-4439-aa7a-ea965c4b0554",
-        "deployment": "production"
+        "deployment": "production",
+        "currently_working": false,
+        "public": false,
+        "hazmapper_project_id": null,
+        "hazmapper_name": "",
+        "hazmapper_description": ""
       }
     ]
   },
   {
-    "projectId": "PRJ-4683",
-    "title": "Reconnaissance of Wind Damage to Buildings in Downtown Houston, Texas",
+    "projectId": "PRJ-2870",
+    "title": "COPE: EAGER Coastal Hazard Planning in Time",
     "hazmapperMaps": [
       {
-        "name": "Reconnaissance of Wind Damage to Buildings in Downtown Houston, TX",
+        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/be980681-17c8-428a-92fd-eec86e9de773",
+        "name": "COPE: EAGER Coastal Hazard Planning in Time",
         "path": "/",
-        "uuid": "04205a98-b2f0-43bb-8e66-a36c508efebd",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3998",
-    "title": "East Africa Cyclone Flooding - Tanzania",
-    "hazmapperMaps": [
-      {
-        "name": "East Africa Cyclone Flooding",
-        "path": "/RApp",
-        "uuid": "f9a60d52-3c41-473e-94e1-c347acb4d24d",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-2170",
-    "title": "GEER - Hurricane Florence",
-    "hazmapperMaps": [
-      {
-        "name": "GEER/RAPID: Hurricane Florence",
-        "path": "/",
-        "uuid": "e183173f-5f84-411b-829f-72fb6f3276f7",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-2956",
-    "title": "GEER - Rapid data acquisition for the investigation of post-fire landslide hazards in the Pacific Northwest",
-    "hazmapperMaps": [
-      {
-        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/cca327cf-1b49-4932-8110-06559c7e61bd",
-        "name": "GEER_HolidayFarmFire,OR",
-        "path": "/",
-        "uuid": "cca327cf-1b49-4932-8110-06559c7e61bd",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3165",
-    "title": "RAPID: Haines Alaska Landslide",
-    "hazmapperMaps": [
-      {
-        "name": "Haines Alaska Landslide",
-        "path": "/",
-        "uuid": "87a55f34-38ea-4b6a-81f5-1ec4890c4aa7",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-4231",
-    "title": "StEER - Hurricane Otis",
-    "hazmapperMaps": [
-      {
-        "name": "StEER - Hurricane Otis (2023)",
-        "path": "/",
-        "uuid": "36722050-7cdc-4b90-8f2f-928674d55e82",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-4242",
-    "title": "Tropical Storm Cristobal",
-    "hazmapperMaps": [
-      {
-        "name": "Tropical Storm Cristobal",
-        "path": "/",
-        "uuid": "198ce028-562e-4b3d-96eb-28bc472de5c6",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3847",
-    "title": "NEER Hurricane Ian - Mangroves",
-    "hazmapperMaps": [
-      {
-        "name": "NEER: Hurricane Ian - Sanibel Mangroves",
-        "path": "/",
-        "uuid": "2e0e0b5c-5457-49f8-8bb6-d9eeb0f9cf41",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-2109",
-    "title": "GEER - M6.6 Hokkaido, Japan",
-    "hazmapperMaps": [
-      {
-        "name": "GEER Hokkaido",
-        "path": "/",
-        "uuid": "5bbf8d4e-26aa-4ea8-a11d-2f21264fd198",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3417",
-    "title": "RAPID: Mayfield, KY Post-Tornado Building Reconnaissance",
-    "hazmapperMaps": [
-      {
-        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/faa7fdea-3df4-45dc-9e89-0552bf578a8e",
-        "name": "Jeff Kentucky",
-        "path": "/RApp",
-        "uuid": "faa7fdea-3df4-45dc-9e89-0552bf578a8e",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3442",
-    "title": "RAPID/GEER Phase 2 Reconnaissance Mission: Western European Floods Summer 2021",
-    "hazmapperMaps": [
-      {
-        "name": "RAPID/GEER: Ahr River Flooding, Germany ",
-        "path": "/",
-        "uuid": "6a11a3be-0f3b-4440-8e77-b3348dfd85a5",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3443",
-    "title": "StEER - 21-22 March 2022 Tornado Outbreak",
-    "hazmapperMaps": [
-      {
-        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/c25f1edd-68b5-4cf3-bd1f-6b1722acd97b",
-        "name": "20220322_ArabiLA_Tornado_StEER",
-        "path": "/",
-        "uuid": "c25f1edd-68b5-4cf3-bd1f-6b1722acd97b",
-        "deployment": "production"
-      },
-      {
-        "name": "20220322_ArabiLA_Tornado_StEER",
-        "path": "/",
-        "uuid": "f84ca213-4bca-475e-afb1-1d54c22e1e69",
-        "deployment": "production"
+        "uuid": "be980681-17c8-428a-92fd-eec86e9de773",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 806,
+        "hazmapper_name": "COPE: EAGER Coastal Hazard Planning in Time",
+        "hazmapper_description": "The project builds capacity to integrate knowledge across the sciences, informs planning practices that seek to communicate and address geohazard risks, and thereby benefiting partner communities directly and contributing to coastal resilience."
       }
     ]
   },
@@ -295,19 +112,81 @@
         "name": "20201010_HD_StEER_GeospatialAssets",
         "path": "/",
         "uuid": "90ab0cc2-68de-43bd-8c37-eca1efbf60ee",
-        "deployment": "production"
+        "deployment": "production",
+        "currently_working": false,
+        "public": false,
+        "hazmapper_project_id": null,
+        "hazmapper_name": "",
+        "hazmapper_description": ""
       }
     ]
   },
   {
-    "projectId": "PRJ-3936",
-    "title": "2023 Cascadia CoPes Hub Meeting",
+    "projectId": "PRJ-2956",
+    "title": "GEER - Rapid data acquisition for the investigation of post-fire landslide hazards in the Pacific Northwest",
     "hazmapperMaps": [
       {
-        "name": "2023 Cascadia CoPEs Meeting at Islandwood",
+        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/cca327cf-1b49-4932-8110-06559c7e61bd",
+        "name": "GEER_HolidayFarmFire,OR",
         "path": "/",
-        "uuid": "1fd9d3ec-00f2-43d0-8992-8119d735c794",
-        "deployment": "production"
+        "uuid": "cca327cf-1b49-4932-8110-06559c7e61bd",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 802,
+        "hazmapper_name": "GEER_HolidayFarmFire,OR",
+        "hazmapper_description": "GEER: Holiday Farm Post-Fire reconnaissance. Finn Rock, Oregon"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3089",
+    "title": "GEER - Croatia",
+    "hazmapperMaps": [
+      {
+        "name": "GEER- December 29, 2020 Croatian Earthquake",
+        "path": "/",
+        "uuid": "87220072-37c3-406b-8171-6b7c2fa0872c",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 826,
+        "hazmapper_name": "GEER- December 29, 2020 Croatian Earthquake",
+        "hazmapper_description": "An examination of the extensive sinkhole collapse following the Mw6.4 earthquake in Croatia on December 29, 2020."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3165",
+    "title": "RAPID: Haines Alaska Landslide",
+    "hazmapperMaps": [
+      {
+        "name": "Haines Alaska Landslide",
+        "path": "/",
+        "uuid": "87a55f34-38ea-4b6a-81f5-1ec4890c4aa7",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 829,
+        "hazmapper_name": "Haines Alaska Landslide",
+        "hazmapper_description": "Data collection for the Haines Alaska Landslide."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3305",
+    "title": "GEER/NEER - Post Hurricane Ida",
+    "hazmapperMaps": [
+      {
+        "name": "Hurricane Ida ",
+        "path": "/",
+        "uuid": "8d407435-32f5-48c1-acf6-a96dbdc673df",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 832,
+        "hazmapper_name": "Hurricane Ida ",
+        "hazmapper_description": "Reconnaissance data for Hurricane Ida. "
       }
     ]
   },
@@ -320,74 +199,88 @@
         "name": "GEER_Marshall Fire, Colorado",
         "path": "",
         "uuid": "473bc0e5-0da4-492c-afe1-0b0d99d463b3",
-        "deployment": "production"
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 568,
+        "hazmapper_name": "GEER_Marshall Fire, Colorado",
+        "hazmapper_description": "This is for sharing data collected during GEER's post-wildfire reconnaissance to Superior, Colorado for the Marshall and Middle Fork Fires."
       },
       {
         "href": "http://hazmapper.local:4200/project/e1c14470-fc3f-4935-9209-c19a2339ed60",
         "name": "Test Map 2",
         "path": "/RApp/uwrapid/Home",
         "uuid": "e1c14470-fc3f-4935-9209-c19a2339ed60",
-        "deployment": "local"
+        "deployment": "local",
+        "currently_working": false,
+        "public": false,
+        "hazmapper_project_id": null,
+        "hazmapper_name": "",
+        "hazmapper_description": ""
       }
     ]
   },
   {
-    "projectId": "PRJ-3916",
-    "title": "GEER Workshop - SSA 2023",
+    "projectId": "PRJ-3417",
+    "title": "RAPID: Mayfield, KY Post-Tornado Building Reconnaissance",
     "hazmapperMaps": [
       {
-        "name": "GEER Workshop - SSA 2023",
-        "path": "/",
-        "uuid": "0e9f7959-4a2d-4ea4-ad27-04a690f9611f",
-        "deployment": "production"
+        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/faa7fdea-3df4-45dc-9e89-0552bf578a8e",
+        "name": "Jeff Kentucky",
+        "path": "/RApp",
+        "uuid": "faa7fdea-3df4-45dc-9e89-0552bf578a8e",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 727,
+        "hazmapper_name": "Mayfield Kentucky Tornado",
+        "hazmapper_description": "Mayfield, KY Post-Tornado Building Reconnaissance"
       }
     ]
   },
   {
-    "projectId": "PRJ-3917",
-    "title": "EERI 2023",
+    "projectId": "PRJ-3442",
+    "title": "RAPID/GEER Phase 2 Reconnaissance Mission: Western European Floods Summer 2021",
     "hazmapperMaps": [
       {
-        "name": "EERI 2023",
+        "name": "RAPID/GEER: Ahr River Flooding, Germany ",
         "path": "/",
-        "uuid": "e4ca2a9a-d2f4-4bb1-a69e-e63dac60857f",
-        "deployment": "production"
+        "uuid": "6a11a3be-0f3b-4440-8e77-b3348dfd85a5",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 877,
+        "hazmapper_name": "RAPID/GEER: Ahr River Flooding, Germany ",
+        "hazmapper_description": "Post-flood reconnaissance of the Ahr River in western Germany. "
       }
     ]
   },
   {
-    "projectId": "PRJ-3890",
-    "title": "GEER 1-day training",
+    "projectId": "PRJ-3443",
+    "title": "StEER - 21-22 March 2022 Tornado Outbreak",
     "hazmapperMaps": [
       {
-        "name": "GEER 1-Day Training GeoCongress 2023",
+        "href": "https://hazmapper.tacc.utexas.edu/hazmapper/project/c25f1edd-68b5-4cf3-bd1f-6b1722acd97b",
+        "name": "20220322_ArabiLA_Tornado_StEER",
         "path": "/",
-        "uuid": "e0e92d13-c72b-4ef2-a5c8-1c9b72dfde2a",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3837",
-    "title": "RAPID/NEER: Pre Hurricane Ian",
-    "hazmapperMaps": [
+        "uuid": "c25f1edd-68b5-4cf3-bd1f-6b1722acd97b",
+        "deployment": "production",
+        "currently_working": false,
+        "public": false,
+        "hazmapper_project_id": null,
+        "hazmapper_name": "",
+        "hazmapper_description": ""
+      },
       {
-        "name": "RAPID/NEER: Pre Hurricane Ian",
+        "name": "20220322_ArabiLA_Tornado_StEER",
         "path": "/",
-        "uuid": "777144e5-d997-40db-bb22-df1daad0419f",
-        "deployment": "production"
-      }
-    ]
-  },
-  {
-    "projectId": "PRJ-3305",
-    "title": "GEER/NEER - Post Hurricane Ida",
-    "hazmapperMaps": [
-      {
-        "name": "Hurricane Ida ",
-        "path": "/",
-        "uuid": "8d407435-32f5-48c1-acf6-a96dbdc673df",
-        "deployment": "production"
+        "uuid": "f84ca213-4bca-475e-afb1-1d54c22e1e69",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 799,
+        "hazmapper_name": "20220322_TOR_Tornado_StEER",
+        "hazmapper_description": "Geospatial reconnaissance data captured following the 22 March 2022 tornado that struck near New Orleans, LA."
       }
     ]
   },
@@ -399,43 +292,335 @@
         "name": "Hurricane Ian (2022) StEER",
         "path": "/",
         "uuid": "339d9223-9e8a-42b1-85b5-eed8365d78ba",
-        "deployment": "production"
+        "deployment": "production",
+        "currently_working": false,
+        "public": false,
+        "hazmapper_project_id": null,
+        "hazmapper_name": "",
+        "hazmapper_description": ""
       }
     ]
   },
   {
-    "projectId": "PRJ-2714",
-    "title": "RAPID: Multi-Hazard Damage to Puerto Rico\u2019s Infrastructure - Investigation of the Interaction of Hurricane and Earthquakes",
+    "projectId": "PRJ-3837",
+    "title": "RAPID/NEER: Pre Hurricane Ian",
     "hazmapperMaps": [
       {
-        "name": "Multi-Hazard Damage to Puerto Rico\u2019s Infrastructure - Investigation of the Interaction of Hurricane and Earthquakes",
+        "name": "RAPID/NEER: Pre Hurricane Ian",
         "path": "/",
-        "uuid": "1260cfdc-00c5-42d2-ab4b-ac498b24e44c",
-        "deployment": "production"
+        "uuid": "777144e5-d997-40db-bb22-df1daad0419f",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 883,
+        "hazmapper_name": "RAPID/NEER: Pre Hurricane Ian",
+        "hazmapper_description": "RAPID and NEER data collection pre-Hurricane Ian."
       }
     ]
   },
   {
-    "projectId": "PRJ-3089",
-    "title": "GEER - Croatia",
+    "projectId": "PRJ-3847",
+    "title": "NEER Hurricane Ian - Mangroves",
     "hazmapperMaps": [
       {
-        "name": "GEER- December 29, 2020 Croatian Earthquake",
+        "name": "NEER: Hurricane Ian - Sanibel Mangroves",
         "path": "/",
-        "uuid": "87220072-37c3-406b-8171-6b7c2fa0872c",
-        "deployment": "production"
+        "uuid": "2e0e0b5c-5457-49f8-8bb6-d9eeb0f9cf41",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 886,
+        "hazmapper_name": "NEER: Hurricane Ian - Sanibel Mangroves",
+        "hazmapper_description": "Resilience of Mangroves after Hurricane Ian on Sanibel Island, Florida."
       }
     ]
   },
   {
-    "projectId": "PRJ-2277",
-    "title": "Camp Wildfires Reconnaissance-Spring 2019",
+    "projectId": "PRJ-3890",
+    "title": "GEER 1-day training",
     "hazmapperMaps": [
       {
-        "name": "GEER_CampWildFires, CA",
+        "name": "GEER 1-Day Training GeoCongress 2023",
         "path": "/",
-        "uuid": "a1e0eb3a-8db7-4b2a-8412-80213841570b",
-        "deployment": "production"
+        "uuid": "e0e92d13-c72b-4ef2-a5c8-1c9b72dfde2a",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 903,
+        "hazmapper_name": "GEER 1-Day Training GeoCongress 2023",
+        "hazmapper_description": "GEER 1- Day Training GeoCongress 2023"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3916",
+    "title": "GEER Workshop - SSA 2023",
+    "hazmapperMaps": [
+      {
+        "name": "GEER Workshop - SSA 2023",
+        "path": "/",
+        "uuid": "0e9f7959-4a2d-4ea4-ad27-04a690f9611f",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 908,
+        "hazmapper_name": "GEER Workshop - SSA 2023",
+        "hazmapper_description": "GEER workshop at the 2023 SSA meeting in Puerto Rico"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3917",
+    "title": "EERI 2023",
+    "hazmapperMaps": [
+      {
+        "name": "EERI 2023",
+        "path": "/",
+        "uuid": "e4ca2a9a-d2f4-4bb1-a69e-e63dac60857f",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 904,
+        "hazmapper_name": "EERI 2023 demo",
+        "hazmapper_description": "EERI 2023"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3936",
+    "title": "2023 Cascadia CoPes Hub Meeting",
+    "hazmapperMaps": [
+      {
+        "name": "2023 Cascadia CoPEs Meeting at Islandwood",
+        "path": "/",
+        "uuid": "1fd9d3ec-00f2-43d0-8992-8119d735c794",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 913,
+        "hazmapper_name": "2023 Cascadia CoPEs Meeting at Islandwood",
+        "hazmapper_description": "2023 Cascadia CoPEs Meeting at Islandwood"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3963",
+    "title": "Skagway Landslide Hazard",
+    "hazmapperMaps": [
+      {
+        "name": "Skagway Rock Slide Hazard",
+        "path": "/RApp",
+        "uuid": "a4f72444-72fb-40f6-a3a4-07676d165e33",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 926,
+        "hazmapper_name": "Skagway Rock Slide Hazard",
+        "hazmapper_description": "Data associated with rock slide hazard data collection in Skagway, AK."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-3998",
+    "title": "East Africa Cyclone Flooding - Tanzania",
+    "hazmapperMaps": [
+      {
+        "name": "East Africa Cyclone Flooding",
+        "path": "/RApp",
+        "uuid": "f9a60d52-3c41-473e-94e1-c347acb4d24d",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 933,
+        "hazmapper_name": "East Africa Cyclone Flooding - Tanzania",
+        "hazmapper_description": "East Africa Cyclone Flooding - Tanzania"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4010",
+    "title": "East African Cyclone Flooding - Mozambique",
+    "hazmapperMaps": [
+      {
+        "name": "East Africa Cyclone Flooding - Mozambique",
+        "path": "/",
+        "uuid": "6a7abcb1-c319-4881-934a-2bf08089e624",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 988,
+        "hazmapper_name": "East Africa Cyclone Flooding - Mozambique",
+        "hazmapper_description": "East Africa Cyclone Flooding - Mozambique"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4211",
+    "title": "StEER/RAPID: Hurricane Ian",
+    "hazmapperMaps": [
+      {
+        "name": "Hurricane Ian RAPID UAV Imagery",
+        "path": "/",
+        "uuid": "7073c5aa-3ec8-499d-99ac-11548709a54f",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1022,
+        "hazmapper_name": "Hurricane Ian",
+        "hazmapper_description": "Aerial imagery and 3D point cloud models collected following Hurricane Ian (captured by the RAPID Facility)."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4231",
+    "title": "StEER - Hurricane Otis",
+    "hazmapperMaps": [
+      {
+        "name": "StEER - Hurricane Otis (2023)",
+        "path": "/",
+        "uuid": "36722050-7cdc-4b90-8f2f-928674d55e82",
+        "deployment": "production",
+        "currently_working": false,
+        "public": false,
+        "hazmapper_project_id": null,
+        "hazmapper_name": "",
+        "hazmapper_description": ""
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4242",
+    "title": "Tropical Storm Cristobal",
+    "hazmapperMaps": [
+      {
+        "name": "Tropical Storm Cristobal",
+        "path": "/",
+        "uuid": "198ce028-562e-4b3d-96eb-28bc472de5c6",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1028,
+        "hazmapper_name": "Tropical Storm Cristobal",
+        "hazmapper_description": "Multispectral data after Tropical Storm Cristobal in 2020."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4550",
+    "title": "GEER Lidar Data from the 2023 Kahramanmaras Earthquake Sequence Reconnaissance",
+    "hazmapperMaps": [
+      {
+        "name": "2023 GEER Kahramanmaras Earthquake Sequence Reconnaissance: Cay District, Iskenderun, Hatay",
+        "path": "/Building B (36.5902, 36.1771)",
+        "uuid": "76a908cd-d8bb-4d1c-8dd9-b66526e6d845",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1100,
+        "hazmapper_name": "2023 GEER Kahramanmaras Earthquake Sequence Reconnaissance: Cay District, Iskenderun, Hatay",
+        "hazmapper_description": "Lidar data collected during the Geotechnical Extreme Events Reconnaissance (GEER) mission to Turkiye from March 27 to April 1 2023. Lidar data was collected in the Cay District of Iskenderun, Hatay with a focus on liquefaction-induced building settlement and ground deformations."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4683",
+    "title": "Reconnaissance of Wind Damage to Buildings in Downtown Houston, Texas",
+    "hazmapperMaps": [
+      {
+        "name": "Reconnaissance of Wind Damage to Buildings in Downtown Houston, TX",
+        "path": "/",
+        "uuid": "04205a98-b2f0-43bb-8e66-a36c508efebd",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1143,
+        "hazmapper_name": "Reconnaissance of Wind Damage to Buildings in Downtown Houston, TX",
+        "hazmapper_description": "This project presents field data collected related to the damage of tall and mid-rise buildings in Downtown Houston, Texas, during the severe storms on Thursday, May 16, 2024."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-4690",
+    "title": "RAPID Scholar: Post-Flood Recovery and Mitigation in Montpelier and Barre, Vermont",
+    "hazmapperMaps": [
+      {
+        "name": "MontpelierVTFloodMitigation",
+        "path": "/",
+        "uuid": "a0d3b385-74bc-4d1f-9e55-ec385fc1900e",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1214,
+        "hazmapper_name": "MontpelierVTFloodMitigation",
+        "hazmapper_description": "Point cloud and imagery data collected following the flooding event in Montpelier, VT."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-5649",
+    "title": "Elwha River Delta Shoreline Morphology Surveys",
+    "hazmapperMaps": [
+      {
+        "name": "Elwha River Mouth Survey",
+        "path": "/",
+        "uuid": "f1b922ba-a116-4a9f-9a99-c36fd63f6ade",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1324,
+        "hazmapper_name": "Elwha River Mouth Survey",
+        "hazmapper_description": "UAS lidar of the Elwha River mouth"
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-5667",
+    "title": "Multidisciplinary Pre, During and Post Storm Data Collection. ",
+    "hazmapperMaps": [
+      {
+        "name": "NEER_HurricaneHelene",
+        "path": "/",
+        "uuid": "ab6ff746-6252-489c-b399-29e645cd0a0d",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1219,
+        "hazmapper_name": "HurricaneHelene",
+        "hazmapper_description": "Geospatial data relating to Hurricane Helene, collected by NEER, GEER, and the UW RAPID Facility."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-5815",
+    "title": "Infrastructure Resilience and Impact Study for Wildfire-affected Infrastructure in Los Angeles",
+    "hazmapperMaps": [
+      {
+        "name": "Los Angeles Fires",
+        "path": "/",
+        "uuid": "f051fdc3-7121-41c6-8930-3dee73eeea4d",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1317,
+        "hazmapper_name": "Los Angeles Fires",
+        "hazmapper_description": "Reconnaissance data of the 2025 Los Angeles fires."
+      }
+    ]
+  },
+  {
+    "projectId": "PRJ-5857",
+    "title": "GEER - 2025 Los Angeles Wildfires",
+    "hazmapperMaps": [
+      {
+        "name": "PRJ-5857 GEER - 2025 Los Angeles Wildfires",
+        "path": "/",
+        "uuid": "ddd250f3-f2cc-4d5f-8657-b1501ce1b2d1",
+        "deployment": "production",
+        "currently_working": true,
+        "public": true,
+        "hazmapper_project_id": 1340,
+        "hazmapper_name": "PRJ-5857 GEER - 2025 Los Angeles Wildfires",
+        "hazmapper_description": "The Palisades and Eaton Fires started on January 7th, 2025 during a major Santa Ana wind storm and burned a total of 15,163 hectares of land until they were fully-contained on January 31st, 2025. Both fires ignited near the wildland-urban interface and spread quickly because of the heavy winds and low humidity, ultimately developing into two of the most devastating conflagrations in California history. The fires caused the deaths of 30 people and combustion of 16,251 structures. \nThis dataset was gathered during extensive reconnaissance efforts that started shortly after the fires were contained and field teams could be deployed, and is documented in a GEEER report (Akin et al. 2025) accessible through the following URL: https://doi.org/10.18118/G6X37N. The dataset currently consists of photos, track logs, and shapefiles representing drone flight coverage areas. The dataset will likely be amended in the future to include LiDAR point clouds, shapefiles representing aerial LiDAR flight paths, and observations of any future land movements.\nThe data presented in this report will support future studies of infrastructure system performance and research aimed at developing improved post-wildfire hydrology and sediment movement models. As such, these efforts follow in GEER\u2019s long tradition of turning disaster into knowledge. \n"
       }
     ]
   }
