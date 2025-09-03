@@ -165,7 +165,7 @@ predefined_published_maps = [
     output_dir = os.path.dirname(output_file)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
+
     with open(output_file, 'w', encoding='utf-8') as f:
         f.write(config_content)
     
