@@ -52,19 +52,36 @@ Instead if linking, You can also copy hazmapper_plugin/ into your QGIS plugins f
 
 ## Development notes
 
-If you make changes to icons or update `resources.qrc`, you must recompile the resources file:
+### One-time setup
 
-```bash
-cd hazmapper_plugin
-pyrcc5 -o resources_rc.py resources.qrc
 ```
+uv venv --python 3.12
+uv sync --group dev
+```
+
+### Format, Linting and Type Checking
+
+```
+# Re-sync after editing pyproject.toml (e.g., adding deps, bumping versions)
+uv sync --group dev
+
+# Auto-format the codebase
+uv run black .
+
+# Lint
+uv run flake8 .
+
+# Type check (within your mypy settings)
+uv run mypy .
+
+# Run only fast tests that don't need QGIS
+uv run pytest -m no_qgis_required
+```
+
 ### Testing
 
 ```bash
-docker run --rm -v $(pwd):/workspace -w /workspace \
-  -e QT_QPA_PLATFORM=offscreen \
-  qgis/qgis:release-3_34 \
-  python3 -m unittest discover -s hazmapper_plugin/test -p 'test_*.py' -v
+make test-qgis
 ```
 
 ## Related Projects

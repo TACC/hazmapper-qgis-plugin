@@ -1,3 +1,5 @@
+from typing import List
+
 # -*- coding: utf-8 -*-
 #
 # HazmapperPlugin documentation build configuration file, created by
@@ -10,8 +12,6 @@
 #
 # All configuration values have a default; values that are commented out
 # serve to show the default.
-
-import sys, os
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -64,7 +64,7 @@ release = "0.1"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
-exclude_patterns = []
+exclude_patterns = List[str] = []
 
 # The reST default role (used for this markup: `text`) to use for all documents.
 # default_role = None

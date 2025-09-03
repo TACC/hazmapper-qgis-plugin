@@ -1,0 +1,15 @@
+# .flake8
+[flake8]
+max-line-length = 100
+extend-ignore = E203,W503
+exclude =
+    .git,
+    .venv,
+    __pycache__,
+    build,
+    dist,
+    .eggs,
+    .mypy_cache,
+    .pytest_cache,
+    hazmapper_plugin/help/_build,
+    hazmapper_plugin/vendor/*

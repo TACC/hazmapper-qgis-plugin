@@ -2,15 +2,13 @@
 /***************************************************************************
  HazmapperPlugin
   A QGIS plugin to display Hazmapper map/project data using QGIS
- """
+"""
 
 from qgis.PyQt.QtCore import QSettings, QTranslator, QCoreApplication, Qt
 from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtWidgets import QAction
 
-# Initialize Qt resources from file resources.py
-from .resources import *
-
+from .hazmapper_icons import plugin_icon_path
 from .hazmapper_plugin_dockwidget import HazmapperPluginDockWidget
 import os.path
 
@@ -93,12 +91,11 @@ class HazmapperPlugin:
     # GUI initialization
     def initGui(self):
         """Create the toolbar button (Plugins toolbar only)."""
-
-        icon_path = ":/plugins/hazmapper_plugin/Hazmapper.svg"
+        icon_path = plugin_icon_path("Hazmapper.svg")
         self.add_action(
-            icon_path,
+            QIcon(icon_path),
             text=self.tr("Hazmapper Tools"),
-            callback=self.toggle_dockwidget,  # Toggle instead of always run
+            callback=self.toggle_dockwidget,
             add_to_menu=False,
             add_to_toolbar=True,
             parent=self.iface.mainWindow(),

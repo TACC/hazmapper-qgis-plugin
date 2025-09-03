@@ -5,12 +5,12 @@ from qgis.core import (
     QgsMarkerSymbol,
     QgsVectorLayer,
 )
+from hazmapper_plugin.hazmapper_icons import plugin_icon_path
 
 
 def apply_camera_icon_style(layer: QgsVectorLayer) -> None:
     """Apply a camera SVG icon for point layers (e.g., images)."""
-    # TODO refactor to make portable
-    svg_path = "/Applications/QGIS.app/Contents/Resources/svg/gpsicons/camera.svg"
+    svg_path = plugin_icon_path("camera.svg")
     svg_layer = QgsSvgMarkerSymbolLayer(svg_path, 6.0, 0)
 
     symbol = QgsMarkerSymbol()

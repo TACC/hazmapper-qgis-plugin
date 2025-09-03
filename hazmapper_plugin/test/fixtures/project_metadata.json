@@ -1,0 +1,9 @@
+[
+  {
+    "id": "project-123",
+    "name": "Test Project",
+    "description": "A sample Hazmapper project for testing.",
+    "owner": "test-user",
+    "created": "2025-01-01T12:00:00Z"
+  }
+]

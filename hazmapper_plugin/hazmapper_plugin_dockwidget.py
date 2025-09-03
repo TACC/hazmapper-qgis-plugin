@@ -1,10 +1,6 @@
 from qgis.PyQt.QtWidgets import (
     QDockWidget,
-    QLabel,
-    QLineEdit,
-    QPushButton,
     QVBoxLayout,
-    QHBoxLayout,
     QWidget,
 )
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
@@ -126,7 +122,7 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.map_status.set_running()
 
             if remove_previous_map:
-                QgsMessageLog.logMessage(f"Remove previous map", "Hazmapper", Qgis.Info)
+                QgsMessageLog.logMessage("Remove previous map", "Hazmapper", Qgis.Info)
                 remove_previous_main_group()
 
             QgsMessageLog.logMessage(
@@ -182,7 +178,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         if required.issubset(self._step_data.keys()):
             # Process once everything is ready
             QgsMessageLog.logMessage(
-                f"All data received; processing", "Hazmapper", Qgis.Info
+                "All data received; processing", "Hazmapper", Qgis.Info
             )
             self._process_all_steps()
 
@@ -230,6 +226,9 @@ class HazmapperPluginDockWidget(QDockWidget):
 
     def _zoom_to_main_group(self):
         """Zoom to combined extent of feature layers inside main group (i.e. current map data)"""
+        if self.main_group is None:
+            return  # nothing to zoom to
+
         extent = None
 
         for child in self.main_group.children():

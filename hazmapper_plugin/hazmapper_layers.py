@@ -1,5 +1,4 @@
 from qgis.core import (
-    QgsTask,
     QgsMessageLog,
     Qgis,
     QgsProject,
@@ -8,11 +7,11 @@ from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
     QgsGeometry,
+    QgsRaster,
     QgsField,
     QgsFields,
 )
 from PyQt5.QtCore import QVariant, QSettings
-from osgeo import ogr
 import json
 import uuid
 
@@ -21,10 +20,7 @@ from .utils.style import (
     apply_point_cloud_style,
     apply_streetview_style,
 )
-
-
-from qgis.core import QgsProject, QgsLayerTreeGroup, QgsMessageLog, Qgis
-from qgis.PyQt.QtCore import QSettings
+from .utils.geometry import json_to_wkt
 
 
 def remove_previous_main_group() -> None:
@@ -96,7 +92,7 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
     """
     try:
         QgsMessageLog.logMessage(
-            f"[Hazmapper] Creating main group", "Hazmapper", Qgis.Info
+            "[Hazmapper] Creating main group", "Hazmapper", Qgis.Info
         )
 
         internal_uuid = str(uuid.uuid4())
@@ -124,7 +120,7 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
 
     except Exception as e:
         QgsMessageLog.logMessage(
-            f"[Hazmapper] Error in create_or_replace_main_group: {str(e)}",
+            f"[Hazmapper] Error in create_main_group: {str(e)}",
             "Hazmapper",
             Qgis.Critical,
         )
@@ -174,7 +170,8 @@ def add_basemap_layers(main_group, layers: list[dict]):
                 continue
 
             # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
-            # This is a legacy naming convention in QGIS; 'wms' is used for both XYZ and WMS tile layers.
+            # This is a legacy naming convention in QGIS; 'wms' is used
+            # for both XYZ and WMS tile layers.
             raster_layer = QgsRasterLayer(uri, name, "wms")
 
             # Validate layer
@@ -258,11 +255,6 @@ def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
         main_group.insertLayer(0, vl)
 
     # TODO handle other types of assets or just plain geometry
-
-
-def json_to_wkt(geometry_json: str) -> str:
-    geom = ogr.CreateGeometryFromJson(geometry_json)
-    return geom.ExportToWkt()
 
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
