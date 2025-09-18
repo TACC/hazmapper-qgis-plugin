@@ -1,4 +1,11 @@
-from qgis.PyQt.QtWidgets import QWidget, QLabel, QVBoxLayout, QHBoxLayout, QGridLayout
+from qgis.PyQt.QtWidgets import (
+    QWidget,
+    QLabel,
+    QVBoxLayout,
+    QHBoxLayout,
+    QGridLayout,
+    QProgressBar,
+)
 from qgis.PyQt.QtCore import Qt, QDateTime
 
 
@@ -24,6 +31,11 @@ class MapStatus(QWidget):
         status_layout.addStretch()
 
         layout.addLayout(status_layout)
+
+        # --- Progress Bar ---
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setVisible(False)
+        layout.addWidget(self.progress_bar)
 
         # --- Metadata Grid ---
         grid = QGridLayout()
@@ -83,17 +95,36 @@ class MapStatus(QWidget):
         """Set status to ready state."""
         self.update_status("🟢", "Ready")
 
-    def set_running(self):
+    def set_running(self, message):
         """Set status to running state."""
-        self.update_status("🔄", "Loading...")
+        self.update_status("🔄", message)
+        self.progress_bar.setVisible(True)
+        self.progress_bar.setRange(0, 0)
+
+    def set_running_with_progress(self, message: str, progress: int) -> None:
+        """Set status to running state with progress bar.
+
+        If `progress` is -1, then we show busy mode
+        """
+        self.update_status("🔄", message)
+        self.progress_bar.setVisible(True)
+
+        if progress == -1:
+            # busy mode
+            self.progress_bar.setRange(0, 0)
+        else:
+            self.progress_bar.setRange(0, 100)
+            self.progress_bar.setValue(progress)
 
     def set_success(self, message="Success"):
         """Set status to success state."""
         self.update_status("✅", message)
+        self.progress_bar.setVisible(False)
 
     def set_error(self, message="Error"):
         """Set status to error state."""
         self.update_status("❌", message)
+        self.progress_bar.setVisible(False)
 
     def set_invalid_url(self):
         """Set status for invalid URL."""

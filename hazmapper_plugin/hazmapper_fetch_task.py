@@ -51,19 +51,29 @@ class LoadGeoApiProjectTask(QgsTask):
 
         headers = {
             "X-Geoapi-Application": "QGIS",
-            "X-Geoapi-IsPublicView": "true",  # currently
+            "X-Geoapi-IsPublicView": "true",  # Plugin only supports public maps
             "X-Guest-Uuid": get_or_create_guest_uuid(),
         }
 
-        # TODO: use QgsNetworkAccessManager instead of urllib
+        # TODO: use QgsNetworkAccessManager instead of urllib; receiving compressed json is
+        #  missing right now in this implementation
 
         # Create request with headers used by hazmapper backend for metrics
         req = request.Request(full_url, headers=headers)
+
         try:
             with request.urlopen(req) as response:
+                QgsMessageLog.logMessage(
+                    f"Received {user_description}", "Hazmapper", Qgis.Info
+                )
+
                 if response.status != 200:
                     raise Exception(f"HTTP {response.status}")
-                return json.loads(response.read().decode())
+                result = json.loads(response.read().decode())
+                QgsMessageLog.logMessage(
+                    f"Read received {user_description}", "Hazmapper", Qgis.Info
+                )
+                return result
         except Exception as e:
             self.error = f"Fetching {user_description} failed: {str(e)}"
             QgsMessageLog.logMessage(traceback.format_exc(), "Hazmapper", Qgis.Warning)
@@ -102,7 +112,7 @@ class LoadGeoApiProjectTask(QgsTask):
         features = self._request_data_from_backend(
             endpoint=f"/{self.project_id}/features/?assetType=image,video,"
             f"point_cloud,streetview,questionnaire,no_asset_vector",
-            user_description="map data (features",
+            user_description="map data (features)",
         )
         if not features:
             return False
