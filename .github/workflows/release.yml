@@ -38,5 +38,5 @@ jobs:
       - name: Create GitHub Release and upload ZIP
         uses: softprops/action-gh-release@v2
         with:
-          files: *.zip
+          files: "*.zip"
           generate_release_notes: true
