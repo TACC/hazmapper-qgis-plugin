@@ -1,6 +1,5 @@
 from qgis.core import (
     QgsCoordinateTransform,
-    QgsVectorLayer,
     QgsProject,
     QgsLayerTreeGroup,
     QgsCoordinateReferenceSystem,

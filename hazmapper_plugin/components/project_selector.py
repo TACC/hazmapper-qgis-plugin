@@ -44,7 +44,10 @@ class ProjectSelector(QWidget):
         # Add predefined projects
         for project in predefined_published_maps:
             if project["currently_working"]:
-                display_name = f"{project['designSafeProjectId']} - {project['designSafeProjectName']}"
+                display_name = (
+                    f"{project['designSafeProjectId']}"
+                    f" - {project['designSafeProjectName']}"
+                )
                 self.project_dropdown.addItem(display_name, project["url"])
 
         self.project_dropdown.currentTextChanged.connect(self.on_selection_changed)

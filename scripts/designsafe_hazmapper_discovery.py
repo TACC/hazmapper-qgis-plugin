@@ -190,7 +190,7 @@ This document lists all DesignSafe published projects that have associated Hazma
 
 | Project Name | PRJ Number | Hazmapper UUID | Hazmapper ID | Currently Working | Public | Hazmapper Link | DesignSafe Link |
 |--------------|------------|----------------|--------------|------------------|--------|----------------|-----------------|
-"""
+"""  # noqa: E501
 
     for project in projects_with_maps:
         project_id = project["projectId"]
@@ -209,17 +209,17 @@ This document lists all DesignSafe published projects that have associated Hazma
             hazmapper_url = (
                 f"https://hazmapper.tacc.utexas.edu/hazmapper/project-public/{uuid}/"
             )
-            designsafe_url = f"https://www.designsafe-ci.org/data/browser/public/designsafe.storage.published/{project_id}"
+            designsafe_url = f"https://www.designsafe-ci.org/data/browser/public/designsafe.storage.published/{project_id}"  # noqa: E501
 
             hazmapper_link = f"[View Map]({hazmapper_url})" if uuid != "N/A" else "N/A"
             designsafe_link = f"[View Project]({designsafe_url})"
 
             readme_content += f"""| {project_title} | {project_id} | {uuid} | {hazmapper_id} | {currently_working} | {public} | {hazmapper_link} | {designsafe_link} |
-"""
+"""  # noqa: E501
 
     readme_content += f"""
 ---
-*Generated automatically from DesignSafe API*  
+*Generated automatically from DesignSafe and Hazmapper*
 *Total projects with Hazmapper maps: {len(projects_with_maps)}*
 """
 
@@ -295,7 +295,8 @@ def main():
                             "Public" if hazmapper_status["public"] else "Private"
                         )
                         print(
-                            f"      {status_msg}, {public_msg}, ID: {hazmapper_status.get('hazmapper_project_id', 'N/A')}"
+                            f"      {status_msg}, {public_msg},"
+                            f" ID: {hazmapper_status.get('hazmapper_project_id', 'N/A')}"
                         )
                     else:
                         enhanced_maps.append(hm_map)
@@ -308,7 +309,7 @@ def main():
                     }
                 )
             else:
-                print(f"  - No Hazmapper maps found")
+                print("  - No Hazmapper maps found")
 
         # Be respectful with API calls
         time.sleep(SLEEP_TIME)

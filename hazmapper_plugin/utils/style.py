@@ -1,14 +1,10 @@
 from qgis.core import (
     QgsFillSymbol,
     QgsLineSymbol,
-    QgsSvgMarkerSymbolLayer,
-    QgsSingleSymbolRenderer,
-    QgsPointClusterRenderer,
     QgsMarkerSymbol,
     QgsVectorLayer,
     QgsSingleSymbolRenderer,
 )
-from hazmapper_plugin.hazmapper_icons import plugin_icon_path
 
 
 def apply_camera_icon_style(

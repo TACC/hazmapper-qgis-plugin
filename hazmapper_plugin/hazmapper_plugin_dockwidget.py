@@ -9,7 +9,6 @@ from qgis.core import (
     QgsMessageLog,
     Qgis,
     QgsNetworkAccessManager,
-    QgsCoordinateTransform,
     QgsProject,
 )
 

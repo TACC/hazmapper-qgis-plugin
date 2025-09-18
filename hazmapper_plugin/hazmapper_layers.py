@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QVariant, QSettings, QTimer
+from PyQt5.QtCore import QVariant, QSettings
 from qgis.core import (
     QgsMessageLog,
     Qgis,
@@ -137,7 +137,7 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
     total_layers = len(sorted_layers)
 
     update_progress = make_ui_pacer(progress_callback, 0.30)
-    update_progress(f"Adding basemap layers", -1, force=True)
+    update_progress("Adding basemap layers", -1, force=True)
 
     for i, layer_data in enumerate(sorted_layers):
         try:
@@ -210,7 +210,7 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
             main_group.insertLayer(0, raster_layer)
-            update_progress(f"Adding basemap layers", int(i * 100 / total_layers))
+            update_progress("Adding basemap layers", int(i * 100 / total_layers))
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Error processing layer '{layer_data.get('name', 'unnamed')}': {str(e)}",
@@ -228,7 +228,7 @@ def add_features_layers(
     """Add feature layers with batching."""
 
     update_progress = make_ui_pacer(progress_callback, 0.30)
-    update_progress(f"Preparing feature layers)", -1, force=True)
+    update_progress("Preparing feature layers", -1, force=True)
 
     #  first group by asset_type
     feature_groups: dict[str, list[tuple[dict, dict]]] = {}
@@ -350,8 +350,8 @@ def add_features_layers(
                     # Bulk-add every BATCH to cutregistry bridge updates
                     if len(batch_layers) >= BATCH or i == total:
                         QgsProject.instance().addMapLayers(batch_layers, False)
-                        for l in batch_layers:
-                            subgroup.insertLayer(0, l)
+                        for layer in batch_layers:
+                            subgroup.insertLayer(0, layer)
                         batch_layers.clear()
 
                     processed += 1

@@ -55,7 +55,8 @@ class LoadGeoApiProjectTask(QgsTask):
             "X-Guest-Uuid": get_or_create_guest_uuid(),
         }
 
-        # TODO: use QgsNetworkAccessManager instead of urllib; receiving compressed json is missing right now in this implementation
+        # TODO: use QgsNetworkAccessManager instead of urllib; receiving compressed json is
+        #  missing right now in this implementation
 
         # Create request with headers used by hazmapper backend for metrics
         req = request.Request(full_url, headers=headers)

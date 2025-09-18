@@ -1,4 +1,4 @@
-# noqa: E501
+# flake8: noqa: E501
 """
 Configuration file for predefined published Hazmapper projects
 """
