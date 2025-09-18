@@ -1,6 +1,6 @@
 .PHONY: test test-qgis test-qgis-debug
 
-PLUGIN_PATH = hazmapper_plugin
+PLUGIN_PATH = Hazmapper
 
 VERSION ?= $(shell awk -F= '/^version=/{gsub(/[ \t]/,""); print $$2}' $(PLUGIN_PATH)/metadata.txt)
 

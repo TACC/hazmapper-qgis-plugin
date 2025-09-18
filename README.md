@@ -26,29 +26,29 @@ for development and is recommended:
     git clone https://github.com/TACC/hazmapper-qgis-plugin.git
     ```
 
-### Step 2: Link the `hazmapper_plugin/` directory into your QGIS plugin folder so changes are reflected live:
+### Step 2: Link the `Hazmapper/` directory into your QGIS plugin folder so changes are reflected live:
 
 **macOS**:
 ```bash
-ln -s /path/to/hazmapper-qgis-plugin/hazmapper_plugin \
-  ~/Library/Application\ Support/QGIS/QGIS3/profiles/default/python/plugins/hazmapper_plugin
+ln -s /path/to/hazmapper-qgis-plugin/Hazmapper \
+  ~/Library/Application\ Support/QGIS/QGIS3/profiles/default/python/plugins/Hazmapper
 ```
 
 **Linux (UNTESTED)**:
 ```bash
-ln -s /path/to/hazmapper-qgis-plugin/hazmapper_plugin \
-  ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/hazmapper_plugin
+ln -s /path/to/hazmapper-qgis-plugin/Hazmapper \
+  ~/.local/share/QGIS/QGIS3/profiles/default/python/plugins/Hazmapper
 ```
 
 Then restart QGIS and enable the plugin via the Plugin Manager:
 
 * Open QGIS
 * Navigate to `Plugins` → `Manage and Install Plugins`
-* Locate hazmapper_plugin in the list and check the box to enable it
+* Locate Hazmapper in the list and check the box to enable it
 
 💡 Use the [Plugin Reloader plugin](https://plugins.qgis.org/plugins/plugin_reloader/) to reload this plugin without restarting QGIS.
 
-Instead if linking, You can also copy hazmapper_plugin/ into your QGIS plugins folder, but this requires re-copying every time you make changes.
+Instead if linking, You can also copy Hazmapper/ into your QGIS plugins folder, but this requires re-copying every time you make changes.
 
 ## Development notes
 
