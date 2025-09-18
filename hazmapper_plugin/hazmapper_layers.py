@@ -1,3 +1,4 @@
+from PyQt5.QtCore import QVariant, QSettings, QTimer
 from qgis.core import (
     QgsMessageLog,
     Qgis,
@@ -10,10 +11,12 @@ from qgis.core import (
     QgsRaster,
     QgsField,
     QgsFields,
+    QgsWkbTypes,
 )
-from PyQt5.QtCore import QVariant, QSettings
 import json
 import uuid
+from .utils.display import get_display_name
+from .utils.qgis import quiet_layer
 
 from .utils.style import (
     apply_camera_icon_style,
@@ -21,6 +24,7 @@ from .utils.style import (
     apply_streetview_style,
 )
 from .utils.geometry import json_to_wkt
+from .utils.ui import make_ui_pacer
 
 
 def remove_previous_main_group() -> None:
@@ -127,26 +131,30 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
         raise
 
 
-def add_basemap_layers(main_group, layers: list[dict]):
+def add_basemap_layers(main_group, layers: list[dict], progress_callback):
     # Sort by zIndex (ascending: lower zIndex means lower in stack)
     sorted_layers = sorted(layers, key=lambda x: x["uiOptions"].get("zIndex", 0))
+    total_layers = len(sorted_layers)
 
-    for layer_data in sorted_layers:
+    update_progress = make_ui_pacer(progress_callback, 0.30)
+    update_progress(f"Adding basemap layers", -1, force=True)
+
+    for i, layer_data in enumerate(sorted_layers):
         try:
             name = layer_data["name"]
             url = layer_data["url"]
             layer_type = layer_data["type"]
             opacity = layer_data["uiOptions"].get("opacity", 1.0)
 
-            QgsMessageLog.logMessage(
-                f"[Basemap] Name: {name}\n"
-                f"          Type: {layer_type}\n"
-                f"          URL: {url}\n"
-                f"          Tile Options: {layer_data.get('tileOptions')}\n"
-                f"          UI Options: {layer_data.get('uiOptions')}",
-                "Hazmapper",
-                Qgis.Info,
-            )
+            # QgsMessageLog.logMessage(
+            #    f"[Basemap] Name: {name}\n"
+            #    f"          Type: {layer_type}\n"
+            #    f"          URL: {url}\n"
+            #    f"          Tile Options: {layer_data.get('tileOptions')}\n"
+            #    f"          UI Options: {layer_data.get('uiOptions')}",
+            #    "Hazmapper",
+            #    Qgis.Info,
+            # )
 
             # Handle subdomain placeholder (pick 'a' for QGIS)
             if "{s}" in url:
@@ -202,7 +210,7 @@ def add_basemap_layers(main_group, layers: list[dict]):
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
             main_group.insertLayer(0, raster_layer)
-
+            update_progress(f"Adding basemap layers", int(i * 100 / total_layers))
         except Exception as e:
             QgsMessageLog.logMessage(
                 f"Error processing layer '{layer_data.get('name', 'unnamed')}': {str(e)}",
@@ -211,50 +219,151 @@ def add_basemap_layers(main_group, layers: list[dict]):
             )
 
 
-def add_features_layers(main_group: QgsLayerTreeGroup, features: dict):
-    # Group features by asset type
-    #  TODO should be grouped by both asset type AND geometry type (i.e. not all images are points)
-    point_cloud_features = []
-    image_features = []
-    streetview_features = []
+def add_features_layers(
+    main_group: QgsLayerTreeGroup,
+    features: dict,
+    progress_callback=None,
+    completion_callback=None,
+):
+    """Add feature layers with batching."""
 
-    for feature in features.get("features", []):
-        assets = feature.get("assets", [])
+    update_progress = make_ui_pacer(progress_callback, 0.30)
+    update_progress(f"Preparing feature layers)", -1, force=True)
+
+    #  first group by asset_type
+    feature_groups: dict[str, list[tuple[dict, dict]]] = {}
+    total_items = 0
+    for feat in features.get("features", []):
+        assets = feat.get("assets") or []
         if not assets:
             continue
-        first_asset = assets[0]
-        asset_type = first_asset.get("asset_type")
-        if asset_type == "point_cloud":
-            point_cloud_features.append((feature, first_asset))
-        elif asset_type == "image":
-            image_features.append(feature)
-        elif asset_type == "streetview":
-            streetview_features.append(feature)
+        asset = assets[0]
+        atype = asset.get("asset_type")
+        feature_groups.setdefault(atype, []).append((feat, asset))
+        total_items += 1
 
-    # Create point cloud layers — one per feature
-    for feature, asset in point_cloud_features:
-        layer_name = asset.get("display_path", "Unnamed Point Cloud")
-        vl = _create_memory_layer(feature, layer_name)
-        _set_feature_metadata(vl, feature, asset)
-        apply_point_cloud_style(vl)
-        QgsProject.instance().addMapLayer(vl, False)
-        main_group.insertLayer(0, vl)
+    processed = 0
 
-    # Create a single image layer
-    if image_features:
-        vl = _create_memory_layer_collection(image_features, "Images")
-        apply_camera_icon_style(vl)
-        QgsProject.instance().addMapLayer(vl, False)
-        main_group.insertLayer(0, vl)
+    #  Work through each type of assets
+    for asset_type, items in feature_groups.items():
+        if not items:
+            continue
 
-    # Create a single streetview layer
-    if streetview_features:
-        vl = _create_memory_layer_collection(streetview_features, "StreetView")
-        apply_streetview_style(vl)
-        QgsProject.instance().addMapLayer(vl, False)
-        main_group.insertLayer(0, vl)
+        update_progress(f"Processing {asset_type})", -1, force=True)
 
-    # TODO handle other types of assets or just plain geometry
+        # ======== IMAGES / STREETVIEW / VIDEO : just a single memory layer =========
+        if asset_type in ("video", "image", "streetview"):
+            layer_name = get_display_name(asset_type)
+            layer = QgsVectorLayer("MultiPoint?crs=EPSG:4326", layer_name, "memory")
+            if not layer.isValid():
+                QgsMessageLog.logMessage(
+                    f"[Hazmapper] Failed to create memory layer for {asset_type}",
+                    "Hazmapper",
+                    Qgis.Critical,
+                )
+                continue
+
+            with quiet_layer(layer):
+                prov = layer.dataProvider()
+
+                fields = QgsFields()
+                fields.append(QgsField("asset_type", QVariant.String))
+                fields.append(QgsField("display_path", QVariant.String))
+                prov.addAttributes(fields)
+                layer.updateFields()
+
+                total = len(items)
+                BATCH = 200  # bigger batches are faster for memory provider
+                for i in range(0, total, BATCH):
+                    feats = []
+                    for feat, asset in items[i : i + BATCH]:
+                        try:
+                            g = QgsGeometry.fromWkt(
+                                json_to_wkt(json.dumps(feat["geometry"]))
+                            )
+                            if not g or g.isEmpty():
+                                continue
+
+                            if QgsWkbTypes.geometryType(
+                                g.wkbType()
+                            ) == QgsWkbTypes.PointGeometry and QgsWkbTypes.isSingleType(
+                                g.wkbType()
+                            ):
+                                g.convertToMultiType()
+
+                            f = QgsFeature()
+                            f.setGeometry(g)
+                            f.setAttributes(
+                                [
+                                    asset.get("asset_type", ""),
+                                    asset.get("display_path", ""),
+                                ]
+                            )
+                            feats.append(f)
+                        except Exception as e:
+                            # Skip bad geometry but keep loading things
+                            QgsMessageLog.logMessage(
+                                f"[Hazmapper] Skipping bad geometry in {asset_type}: {e}",
+                                "Hazmapper",
+                                Qgis.Warning,
+                            )
+                    if feats:
+                        prov.addFeatures(feats)
+
+                    done = min(i + BATCH, total)
+                    pct = int(done * 100 / max(total, 1))
+                    update_progress(
+                        f"Processing {asset_type} features... ({done}/{total})", pct
+                    )
+
+                # finalize, style, insert
+                layer.updateExtents()
+                _set_feature_metadata(layer, items[0][0], items[0][1])
+                _apply_style_for_asset_type(layer, asset_type)
+
+            QgsProject.instance().addMapLayer(layer, False)
+            main_group.insertLayer(0, layer)
+            processed += len(items)
+            update_progress(f"Completed {asset_type} layer insertion", 100, force=True)
+
+        # ======== POINT CLOUDS / OTHERS: many layers, batch project ops =========
+        else:
+            subgroup_name = get_display_name(asset_type)
+            subgroup = QgsLayerTreeGroup(subgroup_name)
+            main_group.insertChildNode(0, subgroup)
+
+            batch_layers, BATCH = [], 50
+            root = QgsProject.instance().layerTreeRoot()
+            # Reduce layer-tree chatter while we stuff the subgroup
+            root.blockSignals(True)
+            subgroup.blockSignals(True)
+            try:
+                total = len(items)
+                for i, (feat, asset) in enumerate(items, 1):
+                    name = asset.get("display_path", f"Unnamed {asset_type}")
+                    vl = _create_memory_layer(feat, name)
+                    if vl:
+                        _set_feature_metadata(vl, feat, asset)
+                        _apply_style_for_asset_type(vl, asset_type)
+                        batch_layers.append(vl)
+
+                    # Bulk-add every BATCH to cutregistry bridge updates
+                    if len(batch_layers) >= BATCH or i == total:
+                        QgsProject.instance().addMapLayers(batch_layers, False)
+                        for l in batch_layers:
+                            subgroup.insertLayer(0, l)
+                        batch_layers.clear()
+
+                    processed += 1
+                    pct = int(processed * 100 / max(total_items, 1))
+                    update_progress(f"Processing {asset_type}… ({i}/{total})", pct)
+            finally:
+                subgroup.blockSignals(False)
+                root.blockSignals(False)
+            update_progress(f"Completed {asset_type} layers", 100, force=True)
+
+    if completion_callback:
+        completion_callback()
 
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
@@ -271,14 +380,12 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
 
     # Build feature
     f = QgsFeature()
-    geometry_json = json.dumps(feature["geometry"])
-    f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(geometry_json)))
+    f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(json.dumps(feature["geometry"]))))
 
     asset = feature.get("assets", [{}])[0] or {}
     f.setAttributes([asset.get("asset_type", ""), asset.get("display_path", "")])
 
     provider.addFeature(f)
-    layer.updateExtents()
     return layer
 
 
@@ -295,13 +402,11 @@ def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer
     layer.updateFields()
 
     features_to_add = []
-    for feature in features:
+    for i, feature in enumerate(features):
         asset = feature.get("assets", [{}])[0] or {}
 
         f = QgsFeature()
-        geometry_json = json.dumps(feature["geometry"])
-        geometry = QgsGeometry.fromWkt(json_to_wkt(geometry_json))
-        f.setGeometry(geometry)
+        f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(json.dumps(feature["geometry"]))))
 
         # Set attributes
         f.setAttributes([asset.get("asset_type", ""), asset.get("display_path", "")])
@@ -310,6 +415,16 @@ def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer
     provider.addFeatures(features_to_add)
     layer.updateExtents()
     return layer
+
+
+def _apply_style_for_asset_type(layer: QgsVectorLayer, asset_type: str):
+    """Apply appropriate styling based on asset type."""
+    if asset_type == "point_cloud":
+        apply_point_cloud_style(layer)
+    elif asset_type == "image":
+        apply_camera_icon_style(layer)
+    elif asset_type == "streetview":
+        apply_streetview_style(layer)
 
 
 def _set_feature_metadata(feature_or_layer, feature, asset):

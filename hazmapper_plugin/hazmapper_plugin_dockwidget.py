@@ -10,7 +10,6 @@ from qgis.core import (
     Qgis,
     QgsNetworkAccessManager,
     QgsCoordinateTransform,
-    QgsCoordinateReferenceSystem,
     QgsProject,
 )
 
@@ -21,6 +20,7 @@ from .hazmapper_layers import (
     create_main_group,
     remove_previous_main_group,
 )
+from .utils.qgis import zoom_to_group
 from .components.map_status import MapStatus
 from .components.project_selector import ProjectSelector
 
@@ -119,7 +119,7 @@ class HazmapperPluginDockWidget(QDockWidget):
 
             # Update UI state
             self.project_selector.set_loading_state(True)
-            self.map_status.set_running()
+            self.map_status.set_running("")
 
             if remove_previous_map:
                 QgsMessageLog.logMessage("Remove previous map", "Hazmapper", Qgis.Info)
@@ -150,7 +150,7 @@ class HazmapperPluginDockWidget(QDockWidget):
     def update_status(self, geoapi_state, message):
         """Update status display and UI state"""
         if geoapi_state == GeoApiTaskState.RUNNING:
-            self.map_status.set_running()
+            self.map_status.set_running(message)
             self.project_selector.set_loading_state(True)
         elif geoapi_state == GeoApiTaskState.DONE:
             self.map_status.set_success("Hazmapper map loaded successfully.")
@@ -184,15 +184,21 @@ class HazmapperPluginDockWidget(QDockWidget):
 
     def _process_all_steps(self):
         """Process project, basemaps, and features once all steps have arrived."""
-        project_data = self._step_data.get(GeoApiStep.PROJECT, {})
-        basemap_data = self._step_data.get(GeoApiStep.BASEMAP_LAYERS, [])
-        feature_data = self._step_data.get(GeoApiStep.FEATURES, [])
+        project = QgsProject.instance()
+        canvas = self.iface.mapCanvas()
 
-        # Clear step data for next load
-        self._step_data.clear()
+        canvas.freeze(True)  # or canvas.setRenderFlag(False)
+        project.blockSignals(True)
 
-        # Update project metadata + create group
-        def step1():
+        try:
+            project_data = self._step_data.get(GeoApiStep.PROJECT, {})
+            basemap_data = self._step_data.get(GeoApiStep.BASEMAP_LAYERS, [])
+            feature_data = self._step_data.get(GeoApiStep.FEATURES, [])
+
+            # Clear step data for next load
+            self._step_data.clear()
+
+            # Update project metadata + create group
             self.map_status.update_project_data(
                 name=project_data.get("name", "–"),
                 description=project_data.get("description", "–"),
@@ -205,63 +211,38 @@ class HazmapperPluginDockWidget(QDockWidget):
             )
 
             QgsMessageLog.logMessage("Created main group", "Hazmapper", Qgis.Info)
-            QTimer.singleShot(0, step2)
 
-        # Step 2: Add basemap layers
-        def step2():
-            add_basemap_layers(self.main_group, basemap_data)
-            QgsMessageLog.logMessage("Added basemap layers", "Hazmapper", Qgis.Info)
-            QTimer.singleShot(0, step3)
+            # Process layers directly (with batching for performance)
+            self.map_status.set_running("Adding basemap layers...")
+            add_basemap_layers(self.main_group, basemap_data, self._update_progress)
 
-        # Step 3: Add feature layers
-        def step3():
-            add_features_layers(self.main_group, feature_data)
-            QgsMessageLog.logMessage("Added feature layers", "Hazmapper", Qgis.Info)
+            self.map_status.set_running("Adding feature layers...")
+            add_features_layers(
+                self.main_group,
+                feature_data,
+                self._update_progress,
+                self._on_features_complete,
+            )
+        finally:
+            project.blockSignals(False)
+            canvas.freeze(False)
+            canvas.refresh()
 
-            # Zoom to features (ignore basemap layers with global extents)
-            self._zoom_to_main_group()
+    def _update_progress(self, message: str, progress: int):
+        """Update progress bar and status message."""
+        self.map_status.set_running_with_progress(message, progress)
 
-        # Start chain of processing steps
-        QTimer.singleShot(0, step1)
+    def _on_features_complete(self):
+        """Called when all feature layers are loaded."""
+        self.map_status.set_success("Hazmapper map loaded successfully.")
+        QTimer.singleShot(0, lambda: self._zoom_to_main_group())
 
     def _zoom_to_main_group(self):
         """Zoom to combined extent of feature layers inside main group (i.e. current map data)"""
         if self.main_group is None:
             return  # nothing to zoom to
 
-        extent = None
-
-        for child in self.main_group.children():
-            if child.nodeType() == child.NodeLayer:
-                layer = child.layer()
-                if layer and layer.type() == layer.VectorLayer:
-                    # Merge extents
-                    if extent is None:
-                        extent = layer.extent()
-                    else:
-                        extent.combineExtentWith(layer.extent())
-
-        if extent and not extent.isEmpty():
-            canvas_crs = self.iface.mapCanvas().mapSettings().destinationCrs()
-
-            # Assume Hazmapper features are EPSG:4326 (set at creation)
-            layer_crs = QgsCoordinateReferenceSystem(4326)
-
-            if layer_crs != canvas_crs:
-                xform = QgsCoordinateTransform(
-                    layer_crs, canvas_crs, QgsProject.instance()
-                )
-                extent = xform.transformBoundingBox(extent)
-
-            self.iface.mapCanvas().setExtent(extent)
-            self.iface.mapCanvas().refresh()
-            QgsMessageLog.logMessage(
-                "Zoomed to Hazmapper features", "Hazmapper", Qgis.Info
-            )
-        else:
-            QgsMessageLog.logMessage(
-                "No Hazmapper features to zoom to", "Hazmapper", Qgis.Info
-            )
+        zoom_to_group(self.main_group)
 
     def on_load_geoapi_project_done(self, status: bool, message: str):
         """Callback triggered when the GeoAPI task finishes successfully."""
@@ -276,5 +257,9 @@ class HazmapperPluginDockWidget(QDockWidget):
             self.update_status(GeoApiTaskState.FAILED, message)
 
     def closeEvent(self, event):
+        # Cancel any running tasks
+        if self.active_task:
+            self.active_task.cancel()
+
         self.closingPlugin.emit()
         event.accept()
