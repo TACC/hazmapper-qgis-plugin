@@ -84,6 +84,13 @@ uv run pytest -m no_qgis_required
 make test-qgis
 ```
 
+
+### Building zip
+
+```bash
+make zip
+```
+
 ## Related Projects
 
 - Hazmapper: [https://hazmapper.tacc.utexas.edu/hazmapper/](https://hazmapper.tacc.utexas.edu/hazmapper/)

@@ -1,12 +1,8 @@
-# This file contains metadata for your plugin.
-
-# This file should be included when you package your plugin.# Mandatory items:
-
 [general]
 name=Hazmapper
 qgisMinimumVersion=3.0
 description=Display Hazmapper project layers using QGIS
-version=0.1
+version=0.1.0
 author=DesignSafe-CI
 email=designsafe-ci@tacc.utexas.edu
 
