@@ -1,0 +1,42 @@
+name: Release on Tag
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: astral-sh/setup-uv@v4
+
+      - name: Create venv + sync dev
+        run: |
+          uv venv --python '3.12'
+          uv sync --group dev
+
+      - name: Verify tag matches metadata version
+        run: |
+          META=$(awk -F= '/^version=/{print $2}' metadata.txt | tr -d " \t")
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "metadata=$META tag=$TAG"
+          [ "$META" = "$TAG" ] || { echo "Version mismatch!"; exit 1; }
+
+      - name: Build zip
+        run: make zip
+
+      - name: Create GitHub Release and upload ZIP
+        uses: softprops/action-gh-release@v2
+        with:
+          files: *.zip
+          generate_release_notes: true
