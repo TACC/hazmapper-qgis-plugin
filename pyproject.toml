@@ -12,7 +12,11 @@ dev = [
     "flake8>=7.1.0",
     "mypy>=1.17.1",
     "pytest>=8.4.1",
+    "qgis-plugin-ci>=2.8.10",
 ]
+
+[tool.qgis-plugin-ci]
+plugin_path = "hazmapper_plugin"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]

@@ -1,5 +1,9 @@
 .PHONY: test test-qgis test-qgis-debug
 
+PLUGIN_PATH = hazmapper_plugin
+
+VERSION ?= $(shell awk -F= '/^version=/{gsub(/[ \t]/,""); print $$2}' $(PLUGIN_PATH)/metadata.txt)
+
 # Fast, pure-Python tests (no QGIS)
 test:
 	uv run pytest -m no_qgis_required
@@ -12,3 +16,8 @@ test-qgis:
 	  -v "$$(pwd)":/work -w /work \
 	  $(QGIS_IMAGE) \
 	  bash -euxo pipefail -c './scripts/run_qgis_tests.sh'
+
+# Build ZIP using the version from metadata.txt
+zip:
+	@echo "Packaging version $(VERSION)"
+	uv run qgis-plugin-ci package "$(VERSION)" --allow-uncommitted
