@@ -1,12 +1,16 @@
 import pytest
-import urllib.error
-from unittest.mock import Mock, patch, call
 
-from Hazmapper.hazmapper_fetch_task import (
+pytest.importorskip("qgis")
+pytest.importorskip("osgeo")
+
+from Hazmapper.hazmapper_fetch_task import (  # noqa: E402
     LoadGeoApiProjectTask,
     GeoApiTaskState,
     GeoApiStep,
 )
+import urllib.error  # noqa: E402
+from unittest.mock import Mock, patch, call  # noqa: E402
+
 
 BASE_URL = "https://hazmapper-TESTING.tacc.utexas.edu/geoapi/projects"
 
@@ -14,6 +18,7 @@ BASE_URL = "https://hazmapper-TESTING.tacc.utexas.edu/geoapi/projects"
 @pytest.fixture
 def task_with_mocks():
     """Set up a task instance and connect PyQt signals to mocks."""
+
     on_done = Mock()
     on_status = Mock()
     on_progress = Mock()
