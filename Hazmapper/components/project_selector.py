@@ -106,14 +106,17 @@ class ProjectSelector(QWidget):
         options_layout.addWidget(self.replace_previous)
 
         options_layout.addStretch()
-        layout.addLayout(options_layout)
 
-        # --- Load Button ---
+        # Load Button
         self.button_load = QPushButton("Load")
         self.button_load.setToolTip("Fetch data and layers from the Hazmapper project")
         self.button_load.clicked.connect(self.load_project)
         self.button_load.setEnabled(False)
-        layout.addWidget(self.button_load)
+        self.button_load.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+
+        options_layout.addWidget(self.button_load, 0, Qt.AlignRight)
+
+        layout.addLayout(options_layout)
 
         # Load saved settings
         self._load_settings()

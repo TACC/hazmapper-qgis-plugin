@@ -1,8 +1,11 @@
 from qgis.PyQt.QtWidgets import (
+    QLabel,
     QDockWidget,
+    QHBoxLayout,
     QVBoxLayout,
     QWidget,
 )
+from qgis.PyQt.QtGui import QIcon
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
 from qgis.core import (
     QgsApplication,
@@ -19,6 +22,7 @@ from .hazmapper_layers import (
     create_main_group,
     remove_previous_main_group,
 )
+from .hazmapper_icons import plugin_icon_path
 from .utils.qgis import zoom_to_group
 from .components.map_status import MapStatus
 from .components.project_selector import ProjectSelector
@@ -75,6 +79,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         self.main_group = None
 
         self.setWindowTitle("Hazmapper")
+        self.setWindowIcon(QIcon(plugin_icon_path("Hazmapper.svg")))
 
         # Restrict docking to right side only
         self.setAllowedAreas(Qt.RightDockWidgetArea)
@@ -88,6 +93,18 @@ class HazmapperPluginDockWidget(QDockWidget):
         layout.setSpacing(4)  # Reduce from default spacing
         layout.setContentsMargins(6, 6, 6, 6)  # Smaller margins
         main_widget.setLayout(layout)
+
+        # Header
+        header = QHBoxLayout()
+        logo = QLabel()
+        logo.setPixmap(QIcon(plugin_icon_path("Hazmapper.svg")).pixmap(18, 18))
+        title = QLabel("<b>Hazmapper</b>")
+        title.setTextFormat(Qt.RichText)
+
+        header.addWidget(logo)
+        header.addWidget(title)
+        header.addStretch()
+        layout.addLayout(header)
 
         # --- Project Selector Component ---
         self.project_selector = ProjectSelector()
