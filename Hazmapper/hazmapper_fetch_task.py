@@ -57,6 +57,7 @@ class LoadGeoApiProjectTask(QgsTask):
 
         # TODO: use QgsNetworkAccessManager instead of urllib; receiving compressed json is
         #  missing right now in this implementation
+        #  See https://github.com/TACC/hazmapper-qgis-plugin/issues/6
 
         # Create request with headers used by hazmapper backend for metrics
         req = request.Request(full_url, headers=headers)
@@ -144,6 +145,5 @@ class LoadGeoApiProjectTask(QgsTask):
             self.task_done.emit(False, self.error)
 
     def cancel(self):
-        # TODO
         QgsMessageLog.logMessage("Task was cancelled", "Hazmapper", Qgis.Warning)
         return True

@@ -1,9 +1,6 @@
-import pytest
-from hazmapper_plugin.utils.geometry import json_to_wkt
-
-
-@pytest.mark.no_qgis_required
 def test_json_to_wkt_polygon():
+    from Hazmapper.utils.geometry import json_to_wkt
+
     geometry_json = """
     {
         "type": "Polygon",
@@ -20,8 +17,9 @@ def test_json_to_wkt_polygon():
     assert "POLYGON" in wkt
 
 
-@pytest.mark.no_qgis_required
 def test_json_to_wkt_point():
+    from Hazmapper.utils.geometry import json_to_wkt
+
     geometry_json = '{"type": "Point", "coordinates": [-97.7431, 30.2672]}'
     wkt = json_to_wkt(geometry_json)
     assert "POINT" in wkt

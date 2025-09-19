@@ -1,11 +1,11 @@
 .PHONY: test test-qgis test-qgis-debug
 
-PLUGIN_PATH = hazmapper_plugin
+PLUGIN_PATH = Hazmapper
 
 VERSION ?= $(shell awk -F= '/^version=/{gsub(/[ \t]/,""); print $$2}' $(PLUGIN_PATH)/metadata.txt)
 
 # Fast, pure-Python tests (no QGIS)
-test:
+test-noqgis:
 	uv run pytest -m no_qgis_required
 
 # QGIS integration tests in Docker (default: 3.34); override with: make test-qgis QGIS_IMAGE=qgis/qgis:release-3_28

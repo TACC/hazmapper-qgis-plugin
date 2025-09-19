@@ -11,5 +11,5 @@ exclude =
     .eggs,
     .mypy_cache,
     .pytest_cache,
-    hazmapper_plugin/help/_build,
-    hazmapper_plugin/vendor/*
+    Hazmapper/help/_build,
+    Hazmapper/vendor/*

@@ -16,7 +16,7 @@ dev = [
 ]
 
 [tool.qgis-plugin-ci]
-plugin_path = "hazmapper_plugin"
+plugin_path = "Hazmapper"
 
 [build-system]
 requires = ["setuptools>=68", "wheel"]
