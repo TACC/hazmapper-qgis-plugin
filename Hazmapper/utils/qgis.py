@@ -1,8 +1,9 @@
 from qgis.core import (
     QgsCoordinateTransform,
+    QgsCoordinateReferenceSystem,
     QgsProject,
     QgsLayerTreeGroup,
-    QgsCoordinateReferenceSystem,
+    QgsMapLayer,
     QgsMessageLog,
     Qgis,
 )
@@ -11,54 +12,61 @@ from contextlib import contextmanager
 
 
 def zoom_to_group(group: QgsLayerTreeGroup):
+    """Zoom to the combined extent of all vector layers inside `group`, recursively."""
     canvas = iface.mapCanvas()
-    QgsMessageLog.logMessage("Starting zoom calculation...", "Hazmapper", Qgis.Info)
-    extent = None
-    layer_count = 0
+    if not canvas or not group:
+        return
 
-    for child in group.children():
-        if child.nodeType() == child.NodeLayer:
-            layer = child.layer()
-            if layer and layer.type() == layer.VectorLayer:
-                layer_count += 1
-                QgsMessageLog.logMessage(
-                    f"Calculating extent for layer: {layer.name()}",
-                    "Hazmapper",
-                    Qgis.Info,
-                )
+    canvas_crs = canvas.mapSettings().destinationCrs()
+    project = QgsProject.instance()
 
-                # Merge extents
-                if extent is None:
-                    extent = layer.extent()
+    def accumulate_extent(node, running_extent=None):
+        # Dive into subgroups
+        for child in node.children():
+            if child.nodeType() == child.NodeGroup:
+                running_extent = accumulate_extent(child, running_extent)
+
+            elif child.nodeType() == child.NodeLayer:
+                layer = child.layer()
+                if not layer or not layer.isValid():
+                    continue
+                if layer.type() != QgsMapLayer.VectorLayer:
+                    continue  # only consider vector layers
+
+                lyr_extent = layer.extent()
+                if lyr_extent is None or lyr_extent.isEmpty():
+                    continue
+
+                # Transform this layer's extent into canvas CRS if needed
+                lyr_crs = layer.crs() if hasattr(layer, "crs") else QgsCoordinateReferenceSystem("EPSG:4326")
+                if lyr_crs.isValid() and lyr_crs != canvas_crs:
+                    try:
+                        xform = QgsCoordinateTransform(lyr_crs, canvas_crs, project)
+                        lyr_extent = xform.transformBoundingBox(lyr_extent)
+                    except Exception as e:
+                        QgsMessageLog.logMessage(
+                            f"[Hazmapper] Extent transform failed for {layer.name()}: {e}",
+                            "Hazmapper", Qgis.Warning
+                        )
+                        continue
+
+                if running_extent is None:
+                    running_extent = lyr_extent
                 else:
-                    extent.combineExtentWith(layer.extent())
+                    running_extent.combineExtentWith(lyr_extent)
 
-    QgsMessageLog.logMessage(
-        f"Calculated extents for {layer_count} layers", "Hazmapper", Qgis.Info
-    )
+        return running_extent
+
+    QgsMessageLog.logMessage("Starting zoom calculation (recursive)…", "Hazmapper", Qgis.Info)
+    extent = accumulate_extent(group)
 
     if extent and not extent.isEmpty():
-        canvas_crs = canvas.mapSettings().destinationCrs()
-
-        # Assume Hazmapper features are EPSG:4326 (set at creation)
-        layer_crs = QgsCoordinateReferenceSystem("EPSG:4326")
-
-        if layer_crs != canvas_crs:
-            QgsMessageLog.logMessage(
-                "Transforming extent coordinates...", "Hazmapper", Qgis.Info
-            )
-            xform = QgsCoordinateTransform(layer_crs, canvas_crs, QgsProject.instance())
-            extent = xform.transformBoundingBox(extent)
-
-        QgsMessageLog.logMessage("Setting map canvas extent...", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage("Setting map canvas extent…", "Hazmapper", Qgis.Info)
         canvas.setExtent(extent)
         canvas.refresh()
-
         QgsMessageLog.logMessage("Zoomed to Hazmapper features", "Hazmapper", Qgis.Info)
     else:
-        QgsMessageLog.logMessage(
-            "No Hazmapper features to zoom to", "Hazmapper", Qgis.Info
-        )
+        QgsMessageLog.logMessage("No Hazmapper features to zoom to", "Hazmapper", Qgis.Info)
 
 
 @contextmanager
