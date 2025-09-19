@@ -1,6 +1,3 @@
-import pytest
-
-
 def test_json_to_wkt_polygon():
     from Hazmapper.utils.geometry import json_to_wkt
 
