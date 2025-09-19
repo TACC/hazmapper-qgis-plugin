@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import patch, Mock, ANY
 
-from Hazmapper.hazmapper_layers import create_main_group
-
 
 @pytest.mark.qgis_required
 @patch("hazmapper_plugin.hazmapper_layers.QgsProject")
 @patch("hazmapper_plugin.hazmapper_layers.QgsLayerTreeGroup")
 def test_create_or_replace_main_group_new(mock_tree_group, mock_project):
+    from Hazmapper.hazmapper_layers import create_main_group
+
     # Mock the QGIS project and layer tree
     mock_root = Mock()
     mock_root.children.return_value = []
