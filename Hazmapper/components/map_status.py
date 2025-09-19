@@ -3,8 +3,9 @@ from qgis.PyQt.QtWidgets import (
     QLabel,
     QVBoxLayout,
     QHBoxLayout,
-    QGridLayout,
     QProgressBar,
+    QFormLayout,
+    QSizePolicy,
 )
 from qgis.PyQt.QtCore import Qt, QDateTime
 
@@ -39,65 +40,64 @@ class MapStatus(QWidget):
         self.progress_bar.setVisible(False)
         layout.addWidget(self.progress_bar)
 
-        # --- Metadata Grid ---
-        grid = QGridLayout()
-        grid.setSpacing(3)
-        grid.setVerticalSpacing(2)
+        # --- Metadata Form (labels left, values right) ---
+        form = QFormLayout()
+        form.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
+        form.setLabelAlignment(Qt.AlignTop | Qt.AlignRight)
+        form.setFormAlignment(Qt.AlignTop)
 
-        # Create title labels with fixed width
+        # Name
         self.name_title = QLabel("Name:")
-        self.name_title.setMinimumWidth(80)
-        self.name_title.setMaximumWidth(80)
         self.name_value = QLabel("–")
-        self.name_value.setWordWrap(True)
+        self.name_value.setWordWrap(
+            True
+        )  # allow wrapping (or set False + elide if you prefer)
+        self.name_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.name_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        form.addRow(self.name_title, self.name_value)
 
+        # Description
         self.description_title = QLabel("Description:")
-        self.description_title.setMinimumWidth(80)
-        self.description_title.setMaximumWidth(80)
         self.description_value = QLabel("–")
         self.description_value.setWordWrap(True)
-        self.description_value.setMaximumHeight(40)
+        self.description_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.description_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        form.addRow(self.description_title, self.description_value)
 
+        # Hazmapper Map
         self.map_title = QLabel("Hazmapper Map:")
-        self.map_title.setMinimumWidth(80)
-        self.map_title.setMaximumWidth(80)
         self.map_value = QLabel("–")
         self.map_value.setTextFormat(Qt.RichText)
         self.map_value.setOpenExternalLinks(True)
         self.map_value.setWordWrap(True)
+        self.map_value.setTextInteractionFlags(
+            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse
+        )
+        self.map_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        form.addRow(self.map_title, self.map_value)
 
+        # DesignSafe (hidden until matched)
         self.ds_title = QLabel("DesignSafe:")
-        self.ds_title.setMinimumWidth(80)
-        self.ds_title.setMaximumWidth(80)
         self.ds_value = QLabel("–")
         self.ds_value.setTextFormat(Qt.RichText)
         self.ds_value.setOpenExternalLinks(True)
         self.ds_value.setWordWrap(True)
+        self.ds_value.setTextInteractionFlags(
+            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse
+        )
+        self.ds_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         self.ds_title.setVisible(False)
         self.ds_value.setVisible(False)
+        form.addRow(self.ds_title, self.ds_value)
 
+        # Last Refreshed
         self.refreshed_title = QLabel("Last Refreshed:")
-        self.refreshed_title.setMinimumWidth(80)
-        self.refreshed_title.setMaximumWidth(80)
         self.refreshed_value = QLabel("–")
+        self.refreshed_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        self.refreshed_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        form.addRow(self.refreshed_title, self.refreshed_value)
 
-        # Add to grid
-        grid.addWidget(self.name_title, 0, 0)
-        grid.addWidget(self.name_value, 0, 1)
-
-        grid.addWidget(self.description_title, 1, 0)
-        grid.addWidget(self.description_value, 1, 1)
-
-        grid.addWidget(self.map_title, 2, 0)
-        grid.addWidget(self.map_value, 2, 1)
-
-        grid.addWidget(self.ds_title, 3, 0)
-        grid.addWidget(self.ds_value, 3, 1)
-
-        grid.addWidget(self.refreshed_title, 4, 0)
-        grid.addWidget(self.refreshed_value, 4, 1)
-
-        layout.addLayout(grid)
+        layout.addLayout(form)
         layout.addStretch()
 
     # Status update methods
@@ -125,8 +125,7 @@ class MapStatus(QWidget):
         self.progress_bar.setVisible(True)
 
         if progress == -1:
-            # busy mode
-            self.progress_bar.setRange(0, 0)
+            self.progress_bar.setRange(0, 0)  # busy mode
         else:
             self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(progress)
@@ -156,9 +155,6 @@ class MapStatus(QWidget):
 
         if url is not None:
             self.map_value.setText(f'<a href="{url}">{url}</a>')
-
-        if url is not None:
-            self.map_value.setText(f'<a href="{url}">{url}</a>')
             self._update_designsafe_from_map_url(url)
         else:
             self._hide_designsafe_row()
@@ -174,6 +170,7 @@ class MapStatus(QWidget):
         self.description_value.setText("–")
         self.map_value.setText("–")
         self.refreshed_value.setText("–")
+        self._hide_designsafe_row()
 
     def set_name(self, name):
         """Set project name."""
@@ -186,6 +183,7 @@ class MapStatus(QWidget):
     def set_map_url(self, url):
         """Set project map URL."""
         self.map_value.setText(f'<a href="{url}">{url}</a>')
+        self._update_designsafe_from_map_url(url)
 
     def set_last_refreshed(self, datetime_str=None):
         """Set last refreshed time. If None, uses current time."""
@@ -206,7 +204,7 @@ class MapStatus(QWidget):
 
     def _update_designsafe_from_map_url(self, map_url: str):
         # TODO this should come from DesignSafe eventually but right now
-        # we are using are predefined_published_maps list
+        # we are using our predefined_published_maps list
         # See https://github.com/TACC/hazmapper-qgis-plugin/issues/8
         item = self._lookup_ds_by_map_url(map_url)
         if not item:
@@ -219,12 +217,12 @@ class MapStatus(QWidget):
             self._hide_designsafe_row()
             return
 
-        ds_href = f"https://www.designsafe-ci.org/data/browser/public/designsafe.storage.published/{prj}"
-
+        ds_href = (
+            f"https://www.designsafe-ci.org/"
+            f"data/browser/public/designsafe.storage.published/{prj}"
+        )
         link_text = f"{prj} | {name}"
-        html = f'<a href="{ds_href}">{link_text}</a>'
-
-        self.ds_value.setText(html)
+        self.ds_value.setText(f'<a href="{ds_href}">{link_text}</a>')
         self.ds_title.setVisible(True)
         self.ds_value.setVisible(True)
 
