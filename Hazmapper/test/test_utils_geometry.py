@@ -1,5 +1,5 @@
 import pytest
-from hazmapper_plugin.utils.geometry import json_to_wkt
+from Hazmapper.utils.geometry import json_to_wkt
 
 
 @pytest.mark.no_qgis_required

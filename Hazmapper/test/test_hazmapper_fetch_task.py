@@ -2,7 +2,7 @@ import pytest
 import urllib.error
 from unittest.mock import Mock, patch, call
 
-from hazmapper_plugin.hazmapper_fetch_task import (
+from Hazmapper.hazmapper_fetch_task import (
     LoadGeoApiProjectTask,
     GeoApiTaskState,
     GeoApiStep,

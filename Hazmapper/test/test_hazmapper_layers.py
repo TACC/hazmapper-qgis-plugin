@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, Mock, ANY
 
-from hazmapper_plugin.hazmapper_layers import create_main_group
+from Hazmapper.hazmapper_layers import create_main_group
 
 
 @pytest.mark.qgis_required
