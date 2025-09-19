@@ -38,7 +38,11 @@ def zoom_to_group(group: QgsLayerTreeGroup):
                     continue
 
                 # Transform this layer's extent into canvas CRS if needed
-                lyr_crs = layer.crs() if hasattr(layer, "crs") else QgsCoordinateReferenceSystem("EPSG:4326")
+                lyr_crs = (
+                    layer.crs()
+                    if hasattr(layer, "crs")
+                    else QgsCoordinateReferenceSystem("EPSG:4326")
+                )
                 if lyr_crs.isValid() and lyr_crs != canvas_crs:
                     try:
                         xform = QgsCoordinateTransform(lyr_crs, canvas_crs, project)
@@ -46,7 +50,8 @@ def zoom_to_group(group: QgsLayerTreeGroup):
                     except Exception as e:
                         QgsMessageLog.logMessage(
                             f"[Hazmapper] Extent transform failed for {layer.name()}: {e}",
-                            "Hazmapper", Qgis.Warning
+                            "Hazmapper",
+                            Qgis.Warning,
                         )
                         continue
 
@@ -57,7 +62,9 @@ def zoom_to_group(group: QgsLayerTreeGroup):
 
         return running_extent
 
-    QgsMessageLog.logMessage("Starting zoom calculation (recursive)…", "Hazmapper", Qgis.Info)
+    QgsMessageLog.logMessage(
+        "Starting zoom calculation (recursive)…", "Hazmapper", Qgis.Info
+    )
     extent = accumulate_extent(group)
 
     if extent and not extent.isEmpty():
@@ -66,7 +73,9 @@ def zoom_to_group(group: QgsLayerTreeGroup):
         canvas.refresh()
         QgsMessageLog.logMessage("Zoomed to Hazmapper features", "Hazmapper", Qgis.Info)
     else:
-        QgsMessageLog.logMessage("No Hazmapper features to zoom to", "Hazmapper", Qgis.Info)
+        QgsMessageLog.logMessage(
+            "No Hazmapper features to zoom to", "Hazmapper", Qgis.Info
+        )
 
 
 @contextmanager
