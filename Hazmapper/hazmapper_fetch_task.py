@@ -100,6 +100,7 @@ class LoadGeoApiProjectTask(QgsTask):
         # TODO Get DS info (link to DS project, and PRJ-124 number and project description
         # uuid for making this call is derived from project-uuid in project.system_name
         # https://www.designsafe-ci.org/api/projects/v2/159846449346309655-242ac119-0001-012/
+        # See https://github.com/TACC/hazmapper-qgis-plugin/issues/8
 
         basemap_layers = self._request_data_from_backend(
             endpoint=f"/{self.project_id}/tile-servers/",

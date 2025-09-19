@@ -254,6 +254,7 @@ def add_features_layers(
         # ======== IMAGES / STREETVIEW / VIDEO : just a single memory layer =========
         if asset_type in ("video", "image", "streetview"):
             layer_name = get_display_name(asset_type)
+            # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
             layer = QgsVectorLayer("MultiPoint?crs=EPSG:4326", layer_name, "memory")
             if not layer.isValid():
                 QgsMessageLog.logMessage(
@@ -368,6 +369,7 @@ def add_features_layers(
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     geom_type = feature["geometry"]["type"]
+    # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
     layer = QgsVectorLayer(f"{geom_type}?crs=EPSG:4326", name, "memory")
     provider = layer.dataProvider()
 
@@ -391,6 +393,7 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
 
 def _create_memory_layer_collection(features: list, name: str) -> QgsVectorLayer:
     first_geom_type = features[0]["geometry"]["type"]
+    # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
     layer = QgsVectorLayer(f"{first_geom_type}?crs=EPSG:4326", name, "memory")
     provider = layer.dataProvider()
 
