@@ -27,7 +27,7 @@ jobs:
 
       - name: Verify tag matches metadata version
         run: |
-          META=$(awk -F= '/^version=/{print $2}' metadata.txt | tr -d " \t")
+          META=$(awk -F= '/^version=/{print $2}' Hazmapper/metadata.txt | tr -d " \t")
           TAG="${GITHUB_REF_NAME#v}"
           echo "metadata=$META tag=$TAG"
           [ "$META" = "$TAG" ] || { echo "Version mismatch!"; exit 1; }
