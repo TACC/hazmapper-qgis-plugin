@@ -7,7 +7,9 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QCheckBox,
+    QSizePolicy,
 )
+from qgis.PyQt.QtCore import Qt
 from qgis.PyQt.QtCore import pyqtSignal, QSettings
 from ..utils.maps_of_published_projects import predefined_published_maps
 
@@ -39,6 +41,17 @@ class ProjectSelector(QWidget):
 
         # Dropdown for predefined projects
         self.project_dropdown = QComboBox()
+
+        # Let the value column expand, but don't size to the longest item
+        self.project_dropdown.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.project_dropdown.setSizeAdjustPolicy(
+            QComboBox.AdjustToMinimumContentsLengthWithIcon
+        )
+        self.project_dropdown.setMinimumContentsLength(28)  # tune (20–32 typical)
+
+        # Elide long items in the popup list, so the popup doesn't demand wide width
+        self.project_dropdown.view().setTextElideMode(Qt.ElideRight)
+
         self.project_dropdown.addItem("Select a project...", "")  # Default item
 
         # Add predefined projects
@@ -93,14 +106,17 @@ class ProjectSelector(QWidget):
         options_layout.addWidget(self.replace_previous)
 
         options_layout.addStretch()
-        layout.addLayout(options_layout)
 
-        # --- Load Button ---
+        # Load Button
         self.button_load = QPushButton("Load")
         self.button_load.setToolTip("Fetch data and layers from the Hazmapper project")
         self.button_load.clicked.connect(self.load_project)
         self.button_load.setEnabled(False)
-        layout.addWidget(self.button_load)
+        self.button_load.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+
+        options_layout.addWidget(self.button_load, 0, Qt.AlignRight)
+
+        layout.addLayout(options_layout)
 
         # Load saved settings
         self._load_settings()
