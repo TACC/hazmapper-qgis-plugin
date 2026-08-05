@@ -20,10 +20,12 @@ from .utils.qgis import quiet_layer
 
 from .utils.style import (
     apply_camera_icon_style,
+    apply_cog_colormap,
     apply_point_cloud_style,
     apply_streetview_style,
 )
 from .utils.geometry import json_to_wkt
+from .utils.tiles import is_internal_cog, resolve_cog_source, resolve_xyz_tile_url
 from .utils.ui import make_ui_pacer
 
 
@@ -131,7 +133,7 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
         raise
 
 
-def add_basemap_layers(main_group, layers: list[dict], progress_callback):
+def add_basemap_layers(main_group, layers: list[dict], progress_callback, geoapi_url):
     # Sort by zIndex (ascending: lower zIndex means lower in stack)
     sorted_layers = sorted(layers, key=lambda x: x["uiOptions"].get("zIndex", 0))
     total_layers = len(sorted_layers)
@@ -142,56 +144,17 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
     for i, layer_data in enumerate(sorted_layers):
         try:
             name = layer_data["name"]
-            url = layer_data["url"]
-            layer_type = layer_data["type"]
-            opacity = layer_data["uiOptions"].get("opacity", 1.0)
+            ui_options = layer_data.get("uiOptions", {})
+            opacity = ui_options.get("opacity", 1.0)
 
-            # QgsMessageLog.logMessage(
-            #    f"[Basemap] Name: {name}\n"
-            #    f"          Type: {layer_type}\n"
-            #    f"          URL: {url}\n"
-            #    f"          Tile Options: {layer_data.get('tileOptions')}\n"
-            #    f"          UI Options: {layer_data.get('uiOptions')}",
-            #    "Hazmapper",
-            #    Qgis.Info,
-            # )
-
-            # Handle subdomain placeholder (pick 'a' for QGIS)
-            if "{s}" in url:
-                url = url.replace("{s}", "a")
-
-            if layer_type == "tms" or (layer_type == "arcgis" and "/tiles/" in url):
-                # Ensure tile path includes expected XYZ format
-                if not url.endswith("/tile/{z}/{y}/{x}") and "{z}/{x}/{y}" not in url:
-                    tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
-                else:
-                    tile_url = url
-
-                # TODO: Later, fetch actual min/max zoom from service metadata
-                uri = f"type=xyz&url={tile_url}&zmin=0&zmax=22"
+            if is_internal_cog(layer_data):
+                raster_layer = _create_internal_cog_layer(
+                    layer_data, name, geoapi_url
+                )
             else:
-                QgsMessageLog.logMessage(
-                    f"Skipping unsupported layer type: {layer_type}",
-                    "Hazmapper",
-                    Qgis.Warning,
-                )
-                continue
+                raster_layer = _create_external_tile_layer(layer_data, name)
 
-            # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
-            # This is a legacy naming convention in QGIS; 'wms' is used
-            # for both XYZ and WMS tile layers.
-            raster_layer = QgsRasterLayer(uri, name, "wms")
-
-            # Validate layer
-            if not raster_layer.isValid():
-                # Note: isValid() only checks URI/provider syntax. It does NOT verify that the
-                # tile URL responds correctly (e.g., 403/404). Network errors will appear only
-                # when tiles are actually requested/rendered.
-                QgsMessageLog.logMessage(
-                    f"Failed to load basemap layer: {name} (check URL)",
-                    "Hazmapper",
-                    Qgis.Warning,
-                )
+            if raster_layer is None:
                 continue
 
             # Apply opacity
@@ -209,7 +172,12 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
 
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
-            main_group.insertLayer(0, raster_layer)
+            node = main_group.insertLayer(0, raster_layer)
+
+            # Respect the map's active state (unchecked layers load but stay hidden)
+            if node is not None and ui_options.get("isActive", True) is False:
+                node.setItemVisibilityChecked(False)
+
             update_progress("Adding basemap layers", int(i * 100 / total_layers))
         except Exception as e:
             QgsMessageLog.logMessage(
@@ -217,6 +185,77 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
                 "Hazmapper",
                 Qgis.Critical,
             )
+
+
+def _create_external_tile_layer(layer_data: dict, name: str):
+    """Create a QGIS XYZ/TMS raster layer for an external tile-server layer."""
+    tile_url = resolve_xyz_tile_url(layer_data)
+    if tile_url is None:
+        QgsMessageLog.logMessage(
+            f"Skipping unsupported layer type: {layer_data.get('type')}",
+            "Hazmapper",
+            Qgis.Warning,
+        )
+        return None
+
+    # TODO: Later, fetch actual min/max zoom from service metadata
+    uri = f"type=xyz&url={tile_url}&zmin=0&zmax=22"
+
+    # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
+    # This is a legacy naming convention in QGIS; 'wms' is used
+    # for both XYZ and WMS tile layers.
+    raster_layer = QgsRasterLayer(uri, name, "wms")
+
+    if not raster_layer.isValid():
+        # Note: isValid() only checks URI/provider syntax. It does NOT verify that the
+        # tile URL responds correctly (e.g., 403/404). Network errors will appear only
+        # when tiles are actually requested/rendered.
+        QgsMessageLog.logMessage(
+            f"Failed to load basemap layer: {name} (check URL)",
+            "Hazmapper",
+            Qgis.Warning,
+        )
+        return None
+
+    return raster_layer
+
+
+def _create_internal_cog_layer(layer_data: dict, name: str, geoapi_url: str):
+    """
+    Create a native GDAL raster layer for an internal COG asset served by geoapi.
+
+    Loaded over HTTP range requests via /vsicurl/ so QGIS can inspect actual
+    pixel values (Identify tool, histograms) rather than pre-rendered tiles.
+    """
+    source = resolve_cog_source(layer_data, geoapi_url)
+    if source is None:
+        QgsMessageLog.logMessage(
+            f"Skipping internal COG layer with no source: {name}",
+            "Hazmapper",
+            Qgis.Warning,
+        )
+        return None
+
+    raster_layer = QgsRasterLayer(source, name, "gdal")
+
+    if not raster_layer.isValid():
+        # isValid() reflects whether GDAL could open the COG header (a network
+        # request). A failure here usually means the asset is unreachable or
+        # the project is not public.
+        QgsMessageLog.logMessage(
+            f"Failed to load internal COG layer: {name} ({source})",
+            "Hazmapper",
+            Qgis.Warning,
+        )
+        return None
+
+    # Approximate the web app's TiTiler colormap for single-band rasters
+    colormap_name = (layer_data.get("uiOptions") or {}).get("renderOptions", {}).get(
+        "colormap_name"
+    )
+    apply_cog_colormap(raster_layer, colormap_name)
+
+    return raster_layer
 
 
 def add_features_layers(
