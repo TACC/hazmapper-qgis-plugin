@@ -8,15 +8,21 @@ This directory contains utility scripts
 
 Discovers all DesignSafe published projects that have associated Hazmapper maps and generates configuration files.
 
-**Usage:**
+**Requirements:** [uv](https://docs.astral.sh/uv/). The script declares its own
+dependencies (`requests`) inline (PEP 723), so `uv run` installs them into a
+throwaway environment; nothing needs to be added to the project.
+
+**Usage** (run from this `scripts/` directory):
 
 ```bash
-
 # Run short version (100 projects for testing)
-python3 designsafe_hazmapper_discovery.py --short
+uv run designsafe_hazmapper_discovery.py --short
 
-# Run long and save python config to a specific location
-python3 designsafe_hazmapper_discovery.py --python_output_location ../hazmapper_plugin/utils/
+# Run full discovery and update the plugin's list of published maps
+uv run designsafe_hazmapper_discovery.py --python_output_location ../Hazmapper/utils/
+```
+
+Without uv, install `requests` yourself (e.g. `pip install requests`) and run with `python3`.
 
 **Generated Files:**
 - `maps_of_published_projects.py` - Python configuration file with project data
