@@ -208,7 +208,12 @@ def add_basemap_layers(
 
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
-            main_group.insertLayer(0, raster_layer)
+            node = main_group.insertLayer(0, raster_layer)
+
+            # Layers switched off in Hazmapper are added but left unchecked
+            if node is not None and ui_options.get("isActive", True) is False:
+                node.setItemVisibilityChecked(False)
+
             update_progress("Adding basemap layers", int(i * 100 / total_layers))
         except Exception as e:
             QgsMessageLog.logMessage(

@@ -76,6 +76,7 @@ def test_add_layers_builds_real_layers(qgis_app):
             "uiOptions": {
                 "zIndex": 1,
                 "opacity": 1,
+                "isActive": False,
                 "renderOptions": {"colormap_name": "terrain"},
             },
         },
@@ -102,7 +103,9 @@ def test_add_layers_builds_real_layers(qgis_app):
             "?url=file%3A%2F%2F%2Fassets%2F833%2F4a026c0a.cog.tif&colormap_name=terrain"
         )
         assert ortho_uri.param("zmax") == "23"
-        # drawn on top of the basemap
+        # switched off in Hazmapper, so present but unchecked; on top of the basemap
+        assert not nodes["Ortho"].itemVisibilityChecked()
+        assert nodes["OpenStreetMap"].itemVisibilityChecked()
         assert list(nodes).index("Ortho") < list(nodes).index("OpenStreetMap")
 
         assert layers["Images"].featureCount() == 2
