@@ -7,11 +7,14 @@ set -euxo pipefail
 apt-get update
 apt-get install -y --no-install-recommends python3-pip python3-setuptools python3-wheel xvfb
 
-python3 -m pip install --upgrade pip
+# Newer Debian/Ubuntu images refuse pip installs into the system Python (PEP 668).
+# This is a throwaway container, so allow it. Older pip versions ignore the variable.
+export PIP_BREAK_SYSTEM_PACKAGES=1
+
 python3 -m pip install pytest
 
-# Install your plugin (editable); comment the next line and use PYTHONPATH=.
-python3 -m pip install -e .
+# The plugin is not installed: `python3 -m pytest` puts the repo root on sys.path,
+# so tests import the `Hazmapper` package straight from the checkout.
 
 # Sanity: confirm PyQGIS is importable
 python3 - <<'PY'

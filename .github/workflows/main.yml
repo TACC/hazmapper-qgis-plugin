@@ -35,6 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         qgis_image:
+          - qgis/qgis:4.2                # QGIS 4 (Qt6)
           - qgis/qgis:3.44-jammy         # QGIS LTR
           - qgis/qgis:release-3_34       # DesignSafe (also a QGIS LTR)
           - qgis/qgis:release-3_36       # DesignSafe VM
