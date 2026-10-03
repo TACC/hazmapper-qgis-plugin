@@ -82,7 +82,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         self.setWindowIcon(QIcon(plugin_icon_path("Hazmapper.svg")))
 
         # Restrict docking to right side only
-        self.setAllowedAreas(Qt.RightDockWidgetArea)
+        self.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
 
         # Central widget
         main_widget = QWidget()
@@ -99,7 +99,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         logo = QLabel()
         logo.setPixmap(QIcon(plugin_icon_path("Hazmapper.svg")).pixmap(18, 18))
         title = QLabel("<b>Hazmapper</b>")
-        title.setTextFormat(Qt.RichText)
+        title.setTextFormat(Qt.TextFormat.RichText)
 
         header.addWidget(logo)
         header.addWidget(title)

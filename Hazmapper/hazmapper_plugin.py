@@ -131,7 +131,9 @@ class HazmapperPlugin:
             self.pluginIsActive = False
         else:
             # Show it on the right instead of top
-            self.iface.addDockWidget(Qt.RightDockWidgetArea, self.dockwidget)
+            self.iface.addDockWidget(
+                Qt.DockWidgetArea.RightDockWidgetArea, self.dockwidget
+            )
             self.dockwidget.show()
             self.pluginIsActive = True
 

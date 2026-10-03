@@ -43,14 +43,16 @@ class ProjectSelector(QWidget):
         self.project_dropdown = QComboBox()
 
         # Let the value column expand, but don't size to the longest item
-        self.project_dropdown.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.project_dropdown.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
         self.project_dropdown.setSizeAdjustPolicy(
-            QComboBox.AdjustToMinimumContentsLengthWithIcon
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
         )
         self.project_dropdown.setMinimumContentsLength(28)  # tune (20–32 typical)
 
         # Elide long items in the popup list, so the popup doesn't demand wide width
-        self.project_dropdown.view().setTextElideMode(Qt.ElideRight)
+        self.project_dropdown.view().setTextElideMode(Qt.TextElideMode.ElideRight)
 
         self.project_dropdown.addItem("Select a project...", "")  # Default item
 
@@ -112,9 +114,11 @@ class ProjectSelector(QWidget):
         self.button_load.setToolTip("Fetch data and layers from the Hazmapper project")
         self.button_load.clicked.connect(self.load_project)
         self.button_load.setEnabled(False)
-        self.button_load.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Fixed)
+        self.button_load.setSizePolicy(
+            QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed
+        )
 
-        options_layout.addWidget(self.button_load, 0, Qt.AlignRight)
+        options_layout.addWidget(self.button_load, 0, Qt.AlignmentFlag.AlignRight)
 
         layout.addLayout(options_layout)
 
