@@ -4,6 +4,8 @@
 set -euxo pipefail
 
 # Minimal tooling for tests
+# No terminal in the container, so stop apt/debconf trying to prompt (avoids warnings)
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y --no-install-recommends python3-pip python3-setuptools python3-wheel xvfb
 
