@@ -12,7 +12,7 @@ This QGIS plugin allows users to connect to **Hazmapper**, a geospatial data pla
 
 ## Requirements
 
-- QGIS 3.10 or newer
+- QGIS 3.34 or newer, including QGIS 4.x
 - Internet connection to access Hazmapper and backend services
 
 ## Development
@@ -87,8 +87,9 @@ own profiles folder (and link the plugin into that profile's `python/plugins/` i
 
 In QGIS, `Settings` → `User Profiles` → `Open Active Profile Folder` shows which folder is in use.
 
-Note: QGIS 4 uses Qt6/PyQt6. The plugin currently imports PyQt5 directly in a couple of
-places, so it does not load in QGIS 4 yet.
+Note: QGIS 3 uses Qt5/PyQt5 and QGIS 4 uses Qt6/PyQt6. Import Qt classes from `qgis.PyQt`
+(never `PyQt5`/`PyQt6` directly) and use fully qualified enums
+(`Qt.AlignmentFlag.AlignRight`, not `Qt.AlignRight`) so the same code runs in both.
 
 ## Development notes
 
@@ -121,7 +122,14 @@ uv run pytest -m no_qgis_required
 ### Testing
 
 ```bash
+# QGIS tests in Docker, against QGIS 3.44 (Qt5)
 make test-qgis
+
+# Against a specific QGIS image
+make test-qgis QGIS_IMAGE=qgis/qgis:4.2
+
+# Against both QGIS 3.44 (Qt5) and QGIS 4.2 (Qt6)
+make test-qgis-all
 ```
 
 

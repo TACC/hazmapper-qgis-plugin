@@ -62,6 +62,6 @@ exclude = "(^|.*/)(resources(_rc)?\\.py|help/source/.*)$"
 
 # Tell mypy to ignore/stub-skip 3rd-party modules without types
 [[tool.mypy.overrides]]
-module = ["qgis", "qgis.*", "PyQt5", "PyQt5.*", "osgeo", "osgeo.*"]
+module = ["qgis", "qgis.*", "PyQt5", "PyQt5.*", "PyQt6", "PyQt6.*", "osgeo", "osgeo.*"]
 ignore_missing_imports = true
 follow_imports = "skip"
