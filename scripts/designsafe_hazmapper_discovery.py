@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.9"
+# dependencies = ["requests"]
+# ///
 # noqa: E501
 """
 Script to discover all DesignSafe projects with Hazmapper maps and generate configuration file
