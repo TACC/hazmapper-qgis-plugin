@@ -33,7 +33,7 @@ def test_create_or_replace_main_group_new(mock_tree_group, mock_project):
 @pytest.mark.qgis_required
 def test_add_layers_builds_real_layers(qgis_app):
     """Build basemap and feature layers with real QGIS objects (no mocks)."""
-    from qgis.core import QgsLayerTreeGroup, QgsProject
+    from qgis.core import QgsDataSourceUri, QgsLayerTreeGroup, QgsProject
     from Hazmapper.hazmapper_layers import add_basemap_layers, add_features_layers
 
     point = {"type": "Point", "coordinates": [-97.7431, 30.2672]}
@@ -65,18 +65,46 @@ def test_add_layers_builds_real_layers(qgis_app):
             "type": "tms",
             "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
             "uiOptions": {"zIndex": 0, "opacity": 0.5},
-        }
+        },
+        {
+            "name": "Ortho",
+            "type": "xyz",
+            "kind": "cog",
+            "internal": True,
+            "url": "/assets/833/4a026c0a.cog.tif",
+            "tileOptions": {"minZoom": 0, "maxZoom": 24, "maxNativeZoom": 23},
+            "uiOptions": {
+                "zIndex": 1,
+                "opacity": 1,
+                "renderOptions": {"colormap_name": "terrain"},
+            },
+        },
+        {"name": "Unsupported", "type": "wms", "url": "x", "uiOptions": {}},
     ]
     group = QgsLayerTreeGroup("test group")
     on_progress = Mock()
     on_complete = Mock()
 
     try:
-        add_basemap_layers(group, basemaps, on_progress)
+        add_basemap_layers(group, basemaps, on_progress, "https://example.org/geoapi")
         add_features_layers(group, features, on_progress, on_complete)
 
-        layers = {node.name(): node.layer() for node in group.findLayers()}
-        assert set(layers) == {"OpenStreetMap", "Images", "scan"}
+        nodes = {node.name(): node for node in group.findLayers()}
+        layers = {name: node.layer() for name, node in nodes.items()}
+        assert set(layers) == {"OpenStreetMap", "Ortho", "Images", "scan"}
+
+        # The internal COG is a TiTiler tile layer carrying Hazmapper's styling
+        ortho_uri = QgsDataSourceUri()
+        ortho_uri.setEncodedUri(layers["Ortho"].source())
+        assert ortho_uri.param("type") == "xyz"
+        assert ortho_uri.param("url") == (
+            "https://example.org/geoapi/tiles/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png"
+            "?url=file%3A%2F%2F%2Fassets%2F833%2F4a026c0a.cog.tif&colormap_name=terrain"
+        )
+        assert ortho_uri.param("zmax") == "23"
+        # drawn on top of the basemap
+        assert list(nodes).index("Ortho") < list(nodes).index("OpenStreetMap")
+
         assert layers["Images"].featureCount() == 2
         assert [f.name() for f in layers["Images"].fields()] == [
             "asset_type",

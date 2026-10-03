@@ -30,6 +30,8 @@ from .components.project_selector import ProjectSelector
 from typing import Dict, Any, List, Optional, Union
 import traceback
 
+GEOAPI_URL = "https://hazmapper.tacc.utexas.edu/geoapi"
+
 
 def _setup_network_logger():
     """Log network request errors (403, 404) to QGIS message log for debugging basemaps."""
@@ -149,7 +151,7 @@ class HazmapperPluginDockWidget(QDockWidget):
 
             # Create async task to get map project data
             self.active_task = LoadGeoApiProjectTask(
-                uuid, base_url="https://hazmapper.tacc.utexas.edu/geoapi/projects"
+                uuid, base_url=f"{GEOAPI_URL}/projects"
             )
             # Connect signals
             self.active_task.progress_data.connect(self.on_load_data)
@@ -230,7 +232,9 @@ class HazmapperPluginDockWidget(QDockWidget):
 
             # Process layers directly (with batching for performance)
             self.map_status.set_running("Adding basemap layers...")
-            add_basemap_layers(self.main_group, basemap_data, self._update_progress)
+            add_basemap_layers(
+                self.main_group, basemap_data, self._update_progress, GEOAPI_URL
+            )
 
             self.map_status.set_running("Adding feature layers...")
             add_features_layers(

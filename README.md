@@ -9,6 +9,8 @@ This QGIS plugin allows users to connect to **Hazmapper**, a geospatial data pla
 - Browse and load Hazmapper projects directly into QGIS
 - Fetch and display GeoJSON datasets served by the GEOAPI backend
 - Interact with published project layers in your local QGIS environment
+- Show a map's tile layers, including GeoTIFFs imported through Hazmapper (drawn as tiles by
+  Hazmapper's tile server, with the styling chosen in Hazmapper)
 
 ## Requirements
 

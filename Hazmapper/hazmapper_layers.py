@@ -1,5 +1,6 @@
 from qgis.PyQt.QtCore import QVariant, QSettings
 from qgis.core import (
+    QgsDataSourceUri,
     QgsMessageLog,
     Qgis,
     QgsProject,
@@ -24,6 +25,7 @@ from .utils.style import (
     apply_streetview_style,
 )
 from .utils.geometry import json_to_wkt
+from .utils.tiles import resolve_tile_url, zoom_range
 from .utils.ui import make_ui_pacer
 
 
@@ -131,7 +133,25 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
         raise
 
 
-def add_basemap_layers(main_group, layers: list[dict], progress_callback):
+def _xyz_layer_uri(tile_url: str, min_zoom: int, max_zoom: int) -> str:
+    """
+    Build the data source URI for an XYZ tile layer.
+
+    QgsDataSourceUri does the encoding because a tile URL can have its own query
+    string (TiTiler URLs do), and QGIS 3 and QGIS 4 decode a hand-encoded URI differently.
+    """
+    uri = QgsDataSourceUri()
+    uri.setParam("type", "xyz")
+    uri.setParam("url", tile_url)
+    uri.setParam("zmin", str(min_zoom))
+    uri.setParam("zmax", str(max_zoom))
+    return bytes(uri.encodedUri()).decode()
+
+
+def add_basemap_layers(
+    main_group, layers: list[dict], progress_callback, geoapi_url: str
+):
+    """Add the map's tile layers (basemaps and internal COGs) as XYZ tile layers."""
     # Sort by zIndex (ascending: lower zIndex means lower in stack)
     sorted_layers = sorted(layers, key=lambda x: x["uiOptions"].get("zIndex", 0))
     total_layers = len(sorted_layers)
@@ -142,40 +162,19 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
     for i, layer_data in enumerate(sorted_layers):
         try:
             name = layer_data["name"]
-            url = layer_data["url"]
-            layer_type = layer_data["type"]
-            opacity = layer_data["uiOptions"].get("opacity", 1.0)
+            ui_options = layer_data["uiOptions"]
+            opacity = ui_options.get("opacity", 1.0)
 
-            # QgsMessageLog.logMessage(
-            #    f"[Basemap] Name: {name}\n"
-            #    f"          Type: {layer_type}\n"
-            #    f"          URL: {url}\n"
-            #    f"          Tile Options: {layer_data.get('tileOptions')}\n"
-            #    f"          UI Options: {layer_data.get('uiOptions')}",
-            #    "Hazmapper",
-            #    Qgis.Info,
-            # )
-
-            # Handle subdomain placeholder (pick 'a' for QGIS)
-            if "{s}" in url:
-                url = url.replace("{s}", "a")
-
-            if layer_type == "tms" or (layer_type == "arcgis" and "/tiles/" in url):
-                # Ensure tile path includes expected XYZ format
-                if not url.endswith("/tile/{z}/{y}/{x}") and "{z}/{x}/{y}" not in url:
-                    tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
-                else:
-                    tile_url = url
-
-                # TODO: Later, fetch actual min/max zoom from service metadata
-                uri = f"type=xyz&url={tile_url}&zmin=0&zmax=22"
-            else:
+            tile_url = resolve_tile_url(layer_data, geoapi_url)
+            if tile_url is None:
                 QgsMessageLog.logMessage(
-                    f"Skipping unsupported layer type: {layer_type}",
+                    f"Skipping unsupported layer type: {layer_data.get('type')}",
                     "Hazmapper",
                     Qgis.Warning,
                 )
                 continue
+
+            uri = _xyz_layer_uri(tile_url, *zoom_range(layer_data))
 
             # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
             # This is a legacy naming convention in QGIS; 'wms' is used
