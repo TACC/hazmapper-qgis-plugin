@@ -16,7 +16,7 @@ Two shapes matter:
 Pure Python (no QGIS imports) so it can be tested without QGIS.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 from urllib.parse import quote, urlencode
 
 DEFAULT_MIN_ZOOM = 0
@@ -63,6 +63,21 @@ def external_tile_url(layer: Dict[str, Any]) -> Optional[str]:
         return url
 
     return None
+
+
+def cog_bounds(layer: Dict[str, Any]) -> Optional[Tuple[float, float, float, float]]:
+    """
+    Return an internal COG's footprint as (west, south, east, north) in degrees
+    (EPSG:4326), or None if geoapi did not provide one.
+
+    geoapi stores it Leaflet-style in tileOptions.bounds: [[south, west], [north, east]].
+    """
+    bounds = (layer.get("tileOptions") or {}).get("bounds")
+    try:
+        (south, west), (north, east) = bounds
+        return float(west), float(south), float(east), float(north)
+    except (TypeError, ValueError):
+        return None
 
 
 def resolve_tile_url(layer: Dict[str, Any], geoapi_url: str) -> Optional[str]:

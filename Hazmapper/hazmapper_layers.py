@@ -1,6 +1,9 @@
 from qgis.PyQt.QtCore import QVariant, QSettings
 from qgis.core import (
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
     QgsDataSourceUri,
+    QgsRectangle,
     QgsMessageLog,
     Qgis,
     QgsProject,
@@ -17,7 +20,7 @@ from qgis.core import (
 import json
 import uuid
 from .utils.display import get_display_name
-from .utils.qgis import quiet_layer
+from .utils.qgis import HAS_KNOWN_EXTENT_PROPERTY, quiet_layer
 
 from .utils.style import (
     apply_camera_icon_style,
@@ -25,7 +28,7 @@ from .utils.style import (
     apply_streetview_style,
 )
 from .utils.geometry import json_to_wkt
-from .utils.tiles import resolve_tile_url, zoom_range
+from .utils.tiles import cog_bounds, is_internal_cog, resolve_tile_url, zoom_range
 from .utils.ui import make_ui_pacer
 
 
@@ -148,6 +151,26 @@ def _xyz_layer_uri(tile_url: str, min_zoom: int, max_zoom: int) -> str:
     return bytes(uri.encodedUri()).decode()
 
 
+def _set_cog_extent(raster_layer: QgsRasterLayer, layer_data: dict) -> None:
+    """
+    Give an internal COG tile layer the footprint of its COG.
+
+    A tile layer otherwise reports the whole world as its extent, so "Zoom to Layer"
+    and the plugin's own zoom would be useless for it.
+    """
+    bounds = cog_bounds(layer_data)
+    if bounds is None:
+        return
+
+    to_layer_crs = QgsCoordinateTransform(
+        QgsCoordinateReferenceSystem("EPSG:4326"),
+        raster_layer.crs(),
+        QgsProject.instance(),
+    )
+    raster_layer.setExtent(to_layer_crs.transformBoundingBox(QgsRectangle(*bounds)))
+    raster_layer.setCustomProperty(HAS_KNOWN_EXTENT_PROPERTY, True)
+
+
 def add_basemap_layers(
     main_group, layers: list[dict], progress_callback, geoapi_url: str
 ):
@@ -195,6 +218,9 @@ def add_basemap_layers(
 
             # Apply opacity
             raster_layer.setOpacity(opacity)
+
+            if is_internal_cog(layer_data):
+                _set_cog_extent(raster_layer, layer_data)
 
             # Enable magnify/oversampling for smoother zoom beyond max LOD
             if hasattr(raster_layer, "setZoomedInResamplingMethod"):

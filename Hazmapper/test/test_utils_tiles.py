@@ -1,6 +1,7 @@
 import pytest
 
 from Hazmapper.utils.tiles import (
+    cog_bounds,
     cog_tile_url,
     external_tile_url,
     is_internal_cog,
@@ -19,7 +20,12 @@ def cog_layer():
         "kind": "cog",
         "internal": True,
         "url": "/assets/833/4a026c0a.cog.tif",
-        "tileOptions": {"minZoom": 0, "maxZoom": 24, "maxNativeZoom": 23},
+        "tileOptions": {
+            "bounds": [[17.9668, -66.6213], [17.9675, -66.6207]],
+            "minZoom": 0,
+            "maxZoom": 24,
+            "maxNativeZoom": 23,
+        },
         "uiOptions": {"zIndex": -4, "opacity": 1, "renderOptions": {}},
     }
 
@@ -100,3 +106,17 @@ def test_zoom_range(cog_layer):
     assert zoom_range({"internal": True, "kind": "cog"}) == (0, 22)
     # external layers keep the fixed range for now
     assert zoom_range({"type": "tms", "tileOptions": {"maxZoom": 19}}) == (0, 22)
+
+
+@pytest.mark.no_qgis_required
+def test_cog_bounds(cog_layer):
+    # geoapi: [[south, west], [north, east]] -> (west, south, east, north)
+    assert cog_bounds(cog_layer) == (-66.6213, 17.9668, -66.6207, 17.9675)
+
+
+@pytest.mark.no_qgis_required
+@pytest.mark.parametrize(
+    "tile_options", [None, {}, {"bounds": None}, {"bounds": [[1, 2]]}, {"bounds": "x"}]
+)
+def test_cog_bounds_missing_or_malformed(tile_options):
+    assert cog_bounds({"tileOptions": tile_options}) is None
