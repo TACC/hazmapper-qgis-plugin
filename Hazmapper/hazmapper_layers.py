@@ -12,7 +12,6 @@ from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
     QgsGeometry,
-    QgsRaster,
     QgsField,
     QgsFields,
     QgsWkbTypes,
@@ -221,16 +220,6 @@ def add_basemap_layers(
 
             if is_internal_cog(layer_data):
                 _set_cog_extent(raster_layer, layer_data)
-
-            # Enable magnify/oversampling for smoother zoom beyond max LOD
-            if hasattr(raster_layer, "setZoomedInResamplingMethod"):
-                # Note: Per-layer magnify/resampling is available in QGIS 3.34+ only.
-                # On older versions (like 3.32), resampling must be set globally via QGIS Options.
-                raster_layer.resamplingEnabled = True
-                raster_layer.setZoomedInResamplingMethod(
-                    QgsRaster.ResamplingMethod.Nearest
-                )
-                raster_layer.setZoomedInMagnificationFactor(4)
 
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
