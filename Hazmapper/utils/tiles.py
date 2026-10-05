@@ -16,6 +16,8 @@ Two shapes matter:
 Pure Python (no QGIS imports) so it can be tested without QGIS.
 """
 
+import html
+import re
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import quote, urlencode
 
@@ -100,3 +102,14 @@ def zoom_range(layer: Dict[str, Any]) -> tuple[int, int]:
         int(tile_options.get("minZoom") or DEFAULT_MIN_ZOOM),
         int(tile_options.get("maxNativeZoom") or DEFAULT_MAX_ZOOM),
     )
+
+
+def attribution_text(layer: Dict[str, Any]) -> str:
+    """
+    Return a tile layer's attribution as plain text ("" if it has none).
+
+    geoapi stores it as the HTML shown on the web map, e.g.
+    '&copy; <a href="...">OpenStreetMap</a> contributors'.
+    """
+    without_tags = re.sub(r"<[^>]+>", "", layer.get("attribution") or "")
+    return " ".join(html.unescape(without_tags).split())

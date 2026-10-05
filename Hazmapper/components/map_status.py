@@ -9,7 +9,7 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.PyQt.QtCore import Qt, QDateTime
 
-from ..utils.maps_of_published_projects import predefined_published_maps
+from ..utils.published_maps import designsafe_project_url, find_published_map
 
 
 class MapStatus(QWidget):
@@ -209,22 +209,8 @@ class MapStatus(QWidget):
             datetime_str = QDateTime.currentDateTime().toString("yyyy-MM-dd hh:mm")
         self.refreshed_value.setText(datetime_str)
 
-    def _normalize_url(self, u: str) -> str:
-        return (u or "").strip().rstrip("/").lower()
-
-    def _lookup_ds_by_map_url(self, map_url: str):
-        """Return the matching DS dict from index if map_url matches, else None."""
-        norm = self._normalize_url(map_url)
-        for item in predefined_published_maps:
-            if self._normalize_url(item.get("url", "")) == norm:
-                return item
-        return None
-
     def _update_designsafe_from_map_url(self, map_url: str):
-        # TODO this should come from DesignSafe eventually but right now
-        # we are using our predefined_published_maps list
-        # See https://github.com/TACC/hazmapper-qgis-plugin/issues/8
-        item = self._lookup_ds_by_map_url(map_url)
+        item = find_published_map(map_url)
         if not item:
             self._hide_designsafe_row()
             return
@@ -235,10 +221,7 @@ class MapStatus(QWidget):
             self._hide_designsafe_row()
             return
 
-        ds_href = (
-            f"https://www.designsafe-ci.org/"
-            f"data/browser/public/designsafe.storage.published/{prj}"
-        )
+        ds_href = designsafe_project_url(prj)
         link_text = f"{prj} | {name}"
         self.ds_value.setText(f'<a href="{ds_href}">{link_text}</a>')
         self.ds_title.setVisible(True)

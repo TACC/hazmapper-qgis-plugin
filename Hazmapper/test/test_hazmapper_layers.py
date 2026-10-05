@@ -40,7 +40,11 @@ def test_add_layers_builds_real_layers(qgis_app):
         QgsLayerTreeGroup,
         QgsProject,
     )
-    from Hazmapper.hazmapper_layers import add_basemap_layers, add_features_layers
+    from Hazmapper.hazmapper_layers import (
+        add_basemap_layers,
+        add_features_layers,
+        set_map_attribution,
+    )
 
     point = {"type": "Point", "coordinates": [-97.7431, 30.2672]}
     polygon = {
@@ -70,6 +74,7 @@ def test_add_layers_builds_real_layers(qgis_app):
             "name": "OpenStreetMap",
             "type": "tms",
             "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "attribution": '&copy; <a href="https://osm.org">OpenStreetMap</a>',
             "uiOptions": {"zIndex": 0, "opacity": 0.5},
         },
         {
@@ -140,6 +145,34 @@ def test_add_layers_builds_real_layers(qgis_app):
         assert layers["OpenStreetMap"].opacity() == 0.5
         on_progress.assert_called()
         on_complete.assert_called_once()
+
+        # Attribution: basemaps keep their provider's; the map's own layers (features
+        # and internal COGs) credit DesignSafe and Hazmapper and link to the sources
+        map_url = (
+            "https://hazmapper.tacc.utexas.edu/hazmapper/project-public/"
+            "1260cfdc-00c5-42d2-ab4b-ac498b24e44c/"
+        )
+        set_map_attribution(group, map_url)
+
+        assert layers["OpenStreetMap"].metadata().rights() == ["© OpenStreetMap"]
+        basemap_links = [
+            link.name for link in layers["OpenStreetMap"].metadata().links()
+        ]
+        assert "Hazmapper map" not in basemap_links
+        for name in ("Images", "scan", "Ortho"):
+            metadata = layers[name].metadata()
+            assert metadata.rights() == ["DesignSafe", "Hazmapper"]
+            links = {link.name: link.url for link in metadata.links()}
+            assert links["Hazmapper map"] == map_url
+            (ds_link,) = [n for n in links if n.startswith("DesignSafe project")]
+            assert ds_link.startswith("DesignSafe project PRJ-2714 | ")
+            assert links[ds_link].endswith("/designsafe.storage.published/PRJ-2714")
+
+        # a map that isn't in a published DesignSafe project only links to the map
+        set_map_attribution(group, "https://example.org/project-public/abc")
+        assert [link.name for link in layers["Images"].metadata().links()] == [
+            "Hazmapper map"
+        ]
     finally:
         QgsProject.instance().removeAllMapLayers()
 

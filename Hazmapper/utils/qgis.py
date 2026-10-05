@@ -13,6 +13,9 @@ from contextlib import contextmanager
 # Set on tile layers that were given a real extent (rather than the whole world)
 HAS_KNOWN_EXTENT_PROPERTY = "hazmapper_has_known_extent"
 
+# Set on tile layers drawn from a GeoTIFF that was imported into the Hazmapper map
+INTERNAL_COG_PROPERTY = "hazmapper_internal_cog"
+
 
 def zoom_to_group(group: QgsLayerTreeGroup):
     """Zoom to the combined extent of the map's data layers inside `group`, recursively."""

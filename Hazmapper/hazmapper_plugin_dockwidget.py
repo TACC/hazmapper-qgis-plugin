@@ -21,6 +21,7 @@ from .hazmapper_layers import (
     add_features_layers,
     create_main_group,
     remove_previous_main_group,
+    set_map_attribution,
 )
 from .hazmapper_icons import plugin_icon_path
 from .utils.qgis import zoom_to_group
@@ -243,6 +244,7 @@ class HazmapperPluginDockWidget(QDockWidget):
                 self._update_progress,
                 self._on_features_complete,
             )
+            set_map_attribution(self.main_group, self.current_project_url)
         finally:
             project.blockSignals(False)
             canvas.freeze(False)

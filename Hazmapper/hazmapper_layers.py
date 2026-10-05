@@ -1,5 +1,6 @@
 from qgis.PyQt.QtCore import QVariant, QSettings
 from qgis.core import (
+    QgsAbstractMetadataBase,
     QgsCoordinateReferenceSystem,
     QgsCoordinateTransform,
     QgsDataSourceUri,
@@ -19,7 +20,8 @@ from qgis.core import (
 import json
 import uuid
 from .utils.display import get_display_name
-from .utils.qgis import HAS_KNOWN_EXTENT_PROPERTY, quiet_layer
+from .utils.published_maps import designsafe_project_url, find_published_map
+from .utils.qgis import HAS_KNOWN_EXTENT_PROPERTY, INTERNAL_COG_PROPERTY, quiet_layer
 
 from .utils.style import (
     apply_camera_icon_style,
@@ -27,7 +29,13 @@ from .utils.style import (
     apply_streetview_style,
 )
 from .utils.geometry import json_to_wkt
-from .utils.tiles import cog_bounds, is_internal_cog, resolve_tile_url, zoom_range
+from .utils.tiles import (
+    attribution_text,
+    cog_bounds,
+    is_internal_cog,
+    resolve_tile_url,
+    zoom_range,
+)
 from .utils.ui import make_ui_pacer
 
 
@@ -219,7 +227,15 @@ def add_basemap_layers(
             raster_layer.setOpacity(opacity)
 
             if is_internal_cog(layer_data):
+                raster_layer.setCustomProperty(INTERNAL_COG_PROPERTY, True)
                 _set_cog_extent(raster_layer, layer_data)
+            else:
+                # Basemaps and other external tiles keep their provider's attribution
+                attribution = attribution_text(layer_data)
+                if attribution:
+                    metadata = raster_layer.metadata()
+                    metadata.setRights([attribution])
+                    raster_layer.setMetadata(metadata)
 
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
@@ -236,6 +252,46 @@ def add_basemap_layers(
                 "Hazmapper",
                 Qgis.Critical,
             )
+
+
+def set_map_attribution(main_group: QgsLayerTreeGroup, map_url: str) -> None:
+    """
+    Record where the map's own data came from on each of its layers: the feature
+    layers and the internal COGs (not basemaps, which have their provider's attribution).
+
+    Shown in QGIS under Layer Properties > Information: credit to DesignSafe and
+    Hazmapper, a link to the Hazmapper map and, when the map belongs to a published
+    DesignSafe project, a link to that project.
+    """
+    links = [QgsAbstractMetadataBase.Link("Hazmapper map", "WWW:LINK", map_url)]
+
+    published = find_published_map(map_url) or {}
+    project_id = published.get("designSafeProjectId")
+    if project_id:
+        project_name = published.get("designSafeProjectName")
+        link_name = f"DesignSafe project {project_id}"
+        if project_name:
+            link_name += f" | {project_name}"
+        links.append(
+            QgsAbstractMetadataBase.Link(
+                link_name, "WWW:LINK", designsafe_project_url(project_id)
+            )
+        )
+
+    for node in main_group.findLayers():
+        layer = node.layer()
+        if layer is None:
+            continue
+        is_map_data = isinstance(layer, QgsVectorLayer) or layer.customProperty(
+            INTERNAL_COG_PROPERTY
+        )
+        if not is_map_data:
+            continue
+
+        metadata = layer.metadata()
+        metadata.setRights(["DesignSafe", "Hazmapper"])
+        metadata.setLinks(links)
+        layer.setMetadata(metadata)
 
 
 def add_features_layers(

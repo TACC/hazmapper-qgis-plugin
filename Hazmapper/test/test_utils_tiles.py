@@ -1,6 +1,7 @@
 import pytest
 
 from Hazmapper.utils.tiles import (
+    attribution_text,
     cog_bounds,
     cog_tile_url,
     external_tile_url,
@@ -128,3 +129,22 @@ def test_cog_bounds(cog_layer):
 )
 def test_cog_bounds_missing_or_malformed(tile_options):
     assert cog_bounds({"tileOptions": tile_options}) is None
+
+
+@pytest.mark.no_qgis_required
+@pytest.mark.parametrize(
+    "attribution, expected",
+    [
+        (
+            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            " contributors",
+            "© OpenStreetMap contributors",
+        ),
+        ("Tiles &copy; Esri &mdash; Source: Esri", "Tiles © Esri — Source: Esri"),
+        ("", ""),
+        (None, ""),
+    ],
+)
+def test_attribution_text(attribution, expected):
+    assert attribution_text({"attribution": attribution}) == expected
+    assert attribution_text({}) == ""
