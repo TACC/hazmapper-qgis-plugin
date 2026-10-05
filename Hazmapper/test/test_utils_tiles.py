@@ -101,11 +101,19 @@ def test_resolve_tile_url(cog_layer):
 
 
 @pytest.mark.no_qgis_required
-def test_zoom_range(cog_layer):
-    assert zoom_range(cog_layer) == (0, 23)
-    assert zoom_range({"internal": True, "kind": "cog"}) == (0, 22)
-    # external layers keep the fixed range for now
-    assert zoom_range({"type": "tms", "tileOptions": {"maxZoom": 19}}) == (0, 22)
+@pytest.mark.parametrize(
+    "tile_options, expected",
+    [
+        # OpenStreetMap as geoapi returns it: zoomable to 24, tiles only to 19
+        ({"minZoom": 0, "maxZoom": 24, "maxNativeZoom": 19}, (0, 19)),
+        ({"minZoom": 5, "maxNativeZoom": 23}, (5, 23)),
+        ({"maxZoom": 24}, (0, 22)),
+        ({}, (0, 22)),
+        (None, (0, 22)),
+    ],
+)
+def test_zoom_range(tile_options, expected):
+    assert zoom_range({"tileOptions": tile_options}) == expected
 
 
 @pytest.mark.no_qgis_required

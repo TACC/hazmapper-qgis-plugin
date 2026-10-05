@@ -88,14 +88,15 @@ def resolve_tile_url(layer: Dict[str, Any], geoapi_url: str) -> Optional[str]:
 
 
 def zoom_range(layer: Dict[str, Any]) -> tuple[int, int]:
-    """Return (min zoom, max zoom) of the tiles to request for a layer."""
-    if is_internal_cog(layer):
-        tile_options = layer.get("tileOptions") or {}
-        max_zoom = tile_options.get("maxNativeZoom") or tile_options.get("maxZoom")
-        return (
-            int(tile_options.get("minZoom") or DEFAULT_MIN_ZOOM),
-            int(max_zoom or DEFAULT_MAX_ZOOM),
-        )
+    """
+    Return (min zoom, max zoom) of the tiles to request for a layer.
 
-    # TODO: Later, fetch actual min/max zoom from service metadata
-    return DEFAULT_MIN_ZOOM, DEFAULT_MAX_ZOOM
+    The max is the deepest zoom the server has tiles for (maxNativeZoom); past it,
+    QGIS enlarges those tiles. tileOptions.maxZoom is not used: it is how far the
+    web map lets you zoom in, which can be deeper than the tiles go.
+    """
+    tile_options = layer.get("tileOptions") or {}
+    return (
+        int(tile_options.get("minZoom") or DEFAULT_MIN_ZOOM),
+        int(tile_options.get("maxNativeZoom") or DEFAULT_MAX_ZOOM),
+    )
