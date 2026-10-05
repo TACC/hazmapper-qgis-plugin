@@ -60,3 +60,30 @@ def test_plugin_lifecycle(qgis_app):
 
     plugin.unload()
     iface.removeToolBarIcon.assert_called_once()
+
+
+@pytest.mark.qgis_required
+@pytest.mark.parametrize(
+    "app_path, geoapi_path",
+    [("hazmapper", "geoapi"), ("staging", "geoapi-staging"), ("dev", "geoapi-dev")],
+)
+def test_load_request_uses_the_maps_own_geoapi(qgis_app, app_path, geoapi_path):
+    """A staging or dev map is fetched from the staging or dev GeoAPI."""
+    from Hazmapper import hazmapper_plugin_dockwidget as dockwidget_module
+    from Hazmapper.hazmapper_icons import PLUGIN_DIR
+
+    dock = dockwidget_module.HazmapperPluginDockWidget(
+        iface=MagicMock(), plugin_dir=PLUGIN_DIR
+    )
+    host = "https://hazmapper.tacc.utexas.edu"
+
+    with (
+        patch.object(dockwidget_module, "LoadGeoApiProjectTask") as task_class,
+        patch.object(dockwidget_module, "QgsApplication"),
+    ):
+        dock.handle_load_request(f"{host}/{app_path}/project-public/abc-123/", False)
+
+    task_class.assert_called_once_with(
+        "abc-123", base_url=f"{host}/{geoapi_path}/projects"
+    )
+    assert dock.geoapi_url == f"{host}/{geoapi_path}"

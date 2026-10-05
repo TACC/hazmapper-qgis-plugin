@@ -24,14 +24,13 @@ from .hazmapper_layers import (
     set_map_attribution,
 )
 from .hazmapper_icons import plugin_icon_path
+from .utils.environment import PRODUCTION_GEOAPI_URL, geoapi_url_for_map
 from .utils.qgis import zoom_to_group
 from .components.map_status import MapStatus
 from .components.project_selector import ProjectSelector
 
 from typing import Dict, Any, List, Optional, Union
 import traceback
-
-GEOAPI_URL = "https://hazmapper.tacc.utexas.edu/geoapi"
 
 
 def _setup_network_logger():
@@ -79,6 +78,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         self.iface = iface
         self.plugin_dir = plugin_dir
         self.current_project_url = None
+        self.geoapi_url = PRODUCTION_GEOAPI_URL
         self.main_group = None
 
         self.setWindowTitle("Hazmapper")
@@ -135,6 +135,8 @@ class HazmapperPluginDockWidget(QDockWidget):
                 return
 
             self.current_project_url = url
+            # production, staging or dev, depending on where the map lives
+            self.geoapi_url = geoapi_url_for_map(url)
 
             # Update UI state
             self.project_selector.set_loading_state(True)
@@ -145,14 +147,15 @@ class HazmapperPluginDockWidget(QDockWidget):
                 remove_previous_main_group()
 
             QgsMessageLog.logMessage(
-                f"Starting task to load map project: {url}, uuid: {uuid}",
+                f"Starting task to load map project: {url}, uuid: {uuid}, "
+                f"geoapi: {self.geoapi_url}",
                 "Hazmapper",
                 Qgis.Info,
             )
 
             # Create async task to get map project data
             self.active_task = LoadGeoApiProjectTask(
-                uuid, base_url=f"{GEOAPI_URL}/projects"
+                uuid, base_url=f"{self.geoapi_url}/projects"
             )
             # Connect signals
             self.active_task.progress_data.connect(self.on_load_data)
@@ -234,7 +237,7 @@ class HazmapperPluginDockWidget(QDockWidget):
             # Process layers directly (with batching for performance)
             self.map_status.set_running("Adding basemap layers...")
             add_basemap_layers(
-                self.main_group, basemap_data, self._update_progress, GEOAPI_URL
+                self.main_group, basemap_data, self._update_progress, self.geoapi_url
             )
 
             self.map_status.set_running("Adding feature layers...")
