@@ -136,6 +136,29 @@ def test_run_success(
 
 @pytest.mark.qgis_required
 @patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
+def test_run_success_without_tile_layers(
+    mock_request, task_with_mocks, project_metadata, features_data
+):
+    """A map with no tile layers (empty list) still loads."""
+    mock_request.side_effect = [project_metadata, [], features_data]
+    task, _on_done, _on_status, on_progress = task_with_mocks
+
+    assert task.run() is True
+    on_progress.assert_any_call(GeoApiStep.BASEMAP_LAYERS, [])
+    on_progress.assert_any_call(GeoApiStep.FEATURES, features_data)
+
+
+@pytest.mark.qgis_required
+@patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
+def test_run_tile_layers_fetch_failure(mock_request, task_with_mocks, project_metadata):
+    mock_request.side_effect = [project_metadata, None]
+    task, *_ = task_with_mocks
+
+    assert task.run() is False
+
+
+@pytest.mark.qgis_required
+@patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
 def test_run_project_fetch_failure(mock_request, task_with_mocks):
     mock_request.return_value = None
     task, *_ = task_with_mocks

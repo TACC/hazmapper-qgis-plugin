@@ -106,7 +106,8 @@ class LoadGeoApiProjectTask(QgsTask):
             endpoint=f"/{self.project_id}/tile-servers/",
             user_description="map data (basemap/tile layers)",
         )
-        if not basemap_layers:
+        # None means the request failed; an empty list is a map without tile layers
+        if basemap_layers is None:
             return False
         else:
             self.progress_data.emit(GeoApiStep.BASEMAP_LAYERS, basemap_layers)
@@ -116,7 +117,7 @@ class LoadGeoApiProjectTask(QgsTask):
             f"point_cloud,streetview,questionnaire,no_asset_vector",
             user_description="map data (features)",
         )
-        if not features:
+        if features is None:
             return False
         else:
             self.progress_data.emit(GeoApiStep.FEATURES, features)
