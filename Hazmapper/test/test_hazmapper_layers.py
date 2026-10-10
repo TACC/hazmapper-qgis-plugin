@@ -375,3 +375,21 @@ def test_single_kind_of_plain_feature_gets_the_plain_name(qgis_app):
         assert layers["Vector Features"].featureCount() == 2
     finally:
         QgsProject.instance().removeAllMapLayers()
+
+
+@pytest.mark.qgis_required
+def test_missing_previous_group_is_not_a_warning(qgis_app):
+    """A saved group id from an earlier session is cleared quietly."""
+    from qgis.core import Qgis
+    from qgis.PyQt.QtCore import QSettings
+    from Hazmapper.hazmapper_layers import remove_previous_main_group
+
+    key = "HazmapperPlugin/internal_group_uuid"
+    QSettings().setValue(key, "id-of-a-group-that-is-gone")
+
+    with patch("Hazmapper.hazmapper_layers.QgsMessageLog") as log:
+        remove_previous_main_group()
+
+    levels = [c.args[2] for c in log.logMessage.call_args_list]
+    assert Qgis.Warning not in levels and Qgis.Critical not in levels
+    assert QSettings().value(key, None) is None

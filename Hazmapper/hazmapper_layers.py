@@ -102,11 +102,15 @@ def remove_previous_main_group() -> None:
             settings.remove("HazmapperPlugin/internal_group_uuid")
             return
 
+    # Normal after restarting QGIS, opening another project or deleting the group by
+    # hand: the saved id is from an earlier map that is no longer in the layer tree.
     QgsMessageLog.logMessage(
-        f"[Hazmapper] No group found for internal UUID {internal_uuid}",
+        f"[Hazmapper] Previous map group {internal_uuid} is no longer present; "
+        "nothing to remove.",
         "Hazmapper",
-        Qgis.Warning,
+        Qgis.Info,
     )
+    settings.remove("HazmapperPlugin/internal_group_uuid")
 
 
 def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup:
