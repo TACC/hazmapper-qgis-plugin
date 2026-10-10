@@ -1,6 +1,6 @@
 import time
 from typing import Callable, Optional
-from PyQt5.QtCore import QEventLoop
+from qgis.PyQt.QtCore import QEventLoop
 from qgis.PyQt.QtWidgets import QApplication
 
 
@@ -23,7 +23,9 @@ def make_ui_pacer(
                     progress_cb(msg or "", 0 if pct is None else int(pct))
                 except Exception:
                     pass
-            QApplication.processEvents(QEventLoop.ExcludeUserInputEvents)
+            QApplication.processEvents(
+                QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
+            )
             last[0] = now
 
     return update_progress_maybe

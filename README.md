@@ -12,7 +12,7 @@ This QGIS plugin allows users to connect to **Hazmapper**, a geospatial data pla
 
 ## Requirements
 
-- QGIS 3.10 or newer
+- QGIS 3.34 or newer, including QGIS 4.x
 - Internet connection to access Hazmapper and backend services
 
 ## Development
@@ -29,10 +29,25 @@ for development and is recommended:
 ### Step 2: Link the `Hazmapper/` directory into your QGIS plugin folder so changes are reflected live:
 
 **macOS**:
+
+Easiest: run `./scripts/qgis_dev_setup.sh`. It finds the QGIS apps in `/Applications` and
+their profiles, and prints the exact link and launch commands for each (it changes nothing).
+
+To do it by hand: QGIS 3.x and QGIS 4.x keep separate settings folders (`QGIS3` and `QGIS4`), so link the
+plugin into each version you want to test. Launch each QGIS once first so its folder exists.
+
 ```bash
-ln -s /path/to/hazmapper-qgis-plugin/Hazmapper \
-  ~/Library/Application\ Support/QGIS/QGIS3/profiles/default/python/plugins/Hazmapper
+PLUGIN=/path/to/hazmapper-qgis-plugin/Hazmapper
+QGIS_SUPPORT=~/Library/Application\ Support/QGIS
+
+# QGIS 3.x
+ln -s "$PLUGIN" "$QGIS_SUPPORT/QGIS3/profiles/default/python/plugins/Hazmapper"
+
+# QGIS 4.x
+ln -s "$PLUGIN" "$QGIS_SUPPORT/QGIS4/profiles/default/python/plugins/Hazmapper"
 ```
+
+Because the link points at your checkout, every QGIS loads whichever branch you have checked out.
 
 **Linux (UNTESTED)**:
 ```bash
@@ -49,6 +64,32 @@ Then restart QGIS and enable the plugin via the Plugin Manager:
 💡 Use the [Plugin Reloader plugin](https://plugins.qgis.org/plugins/plugin_reloader/) to reload this plugin without restarting QGIS.
 
 Instead if linking, You can also copy Hazmapper/ into your QGIS plugins folder, but this requires re-copying every time you make changes.
+
+### Running multiple QGIS versions (macOS)
+
+QGIS apps installed in `/Applications` can sit side by side (e.g. `QGIS-3-44-LTR.app` and
+`QGIS-final-4_2_1.app`). Start them from a terminal so Python errors from the plugin are
+printed there as well as in QGIS's Log Messages panel. The program name inside each app
+differs, so run `./scripts/qgis_dev_setup.sh` to print the exact command for each QGIS you
+have installed. For example:
+
+```bash
+/Applications/QGIS-3-44-LTR.app/Contents/MacOS/QGIS
+/Applications/QGIS-final-4_2_1.app/Contents/MacOS/QGIS-final-4_2_1
+```
+
+Two 3.x versions share the same `QGIS3` settings folder. To keep one isolated, give it its
+own profiles folder (and link the plugin into that profile's `python/plugins/` instead):
+
+```bash
+/Applications/QGIS-3-44-LTR.app/Contents/MacOS/QGIS --profiles-path ~/qgis-profiles/3.44
+```
+
+In QGIS, `Settings` → `User Profiles` → `Open Active Profile Folder` shows which folder is in use.
+
+Note: QGIS 3 uses Qt5/PyQt5 and QGIS 4 uses Qt6/PyQt6. Import Qt classes from `qgis.PyQt`
+(never `PyQt5`/`PyQt6` directly) and use fully qualified enums
+(`Qt.AlignmentFlag.AlignRight`, not `Qt.AlignRight`) so the same code runs in both.
 
 ## Development notes
 
@@ -81,7 +122,14 @@ uv run pytest -m no_qgis_required
 ### Testing
 
 ```bash
+# QGIS tests in Docker, against QGIS 3.44 (Qt5)
 make test-qgis
+
+# Against a specific QGIS image
+make test-qgis QGIS_IMAGE=qgis/qgis:4.2
+
+# Against both QGIS 3.44 (Qt5) and QGIS 4.2 (Qt6)
+make test-qgis-all
 ```
 
 

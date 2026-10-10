@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QVariant, QSettings
+from qgis.PyQt.QtCore import QVariant, QSettings
 from qgis.core import (
     QgsMessageLog,
     Qgis,

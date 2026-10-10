@@ -28,3 +28,13 @@ def features_data(test_data_dir):
     """Load features data from JSON file."""
     with open(test_data_dir / "features.json", "r") as f:
         return json.load(f)
+
+
+@pytest.fixture(scope="session")
+def qgis_app():
+    """Start a QGIS application (with GUI support) so widgets can be created."""
+    from qgis.testing import start_app
+
+    # start_app keeps the application alive until the interpreter exits and shuts it
+    # down cleanly; creating and destroying QgsApplication ourselves segfaults at exit.
+    return start_app()
