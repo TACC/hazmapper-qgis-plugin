@@ -68,10 +68,6 @@ for app in "${apps[@]}"; do
       echo "     ln -s \"$PLUGIN_DIR\" \"$link\""
     fi
   done
-
-  if [ "$major" = "4" ]; then
-    echo "   Note: the plugin still imports PyQt5 directly, so it does not load in QGIS 4 yet."
-  fi
 done
 
 if [ "$qgis3_count" -gt 1 ]; then

@@ -42,9 +42,9 @@ class MapStatus(QWidget):
 
         # --- Metadata Form (labels left, values right) ---
         form = QFormLayout()
-        form.setFieldGrowthPolicy(QFormLayout.ExpandingFieldsGrow)
-        form.setLabelAlignment(Qt.AlignTop | Qt.AlignRight)
-        form.setFormAlignment(Qt.AlignTop)
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
+        form.setFormAlignment(Qt.AlignmentFlag.AlignTop)
 
         # Name
         self.name_title = QLabel("Name:")
@@ -52,40 +52,54 @@ class MapStatus(QWidget):
         self.name_value.setWordWrap(
             True
         )  # allow wrapping (or set False + elide if you prefer)
-        self.name_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.name_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.name_value.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.name_value.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         form.addRow(self.name_title, self.name_value)
 
         # Description
         self.description_title = QLabel("Description:")
         self.description_value = QLabel("–")
         self.description_value.setWordWrap(True)
-        self.description_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.description_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.description_value.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.description_value.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
         form.addRow(self.description_title, self.description_value)
 
         # Hazmapper Map
         self.map_title = QLabel("Hazmapper Map:")
         self.map_value = QLabel("–")
-        self.map_value.setTextFormat(Qt.RichText)
+        self.map_value.setTextFormat(Qt.TextFormat.RichText)
         self.map_value.setOpenExternalLinks(True)
         self.map_value.setWordWrap(True)
         self.map_value.setTextInteractionFlags(
-            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
-        self.map_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.map_value.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         form.addRow(self.map_title, self.map_value)
 
         # DesignSafe (hidden until matched)
         self.ds_title = QLabel("DesignSafe:")
         self.ds_value = QLabel("–")
-        self.ds_value.setTextFormat(Qt.RichText)
+        self.ds_value.setTextFormat(Qt.TextFormat.RichText)
         self.ds_value.setOpenExternalLinks(True)
         self.ds_value.setWordWrap(True)
         self.ds_value.setTextInteractionFlags(
-            Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse
+            Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
-        self.ds_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.ds_value.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.ds_title.setVisible(False)
         self.ds_value.setVisible(False)
         form.addRow(self.ds_title, self.ds_value)
@@ -93,8 +107,12 @@ class MapStatus(QWidget):
         # Last Refreshed
         self.refreshed_title = QLabel("Last Refreshed:")
         self.refreshed_value = QLabel("–")
-        self.refreshed_value.setTextInteractionFlags(Qt.TextSelectableByMouse)
-        self.refreshed_value.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self.refreshed_value.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+        self.refreshed_value.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         form.addRow(self.refreshed_title, self.refreshed_value)
 
         layout.addLayout(form)

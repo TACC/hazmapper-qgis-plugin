@@ -1,6 +1,7 @@
 [general]
 name=Hazmapper
-qgisMinimumVersion=3.0
+qgisMinimumVersion=3.34
+qgisMaximumVersion=4.99
 description=Display Hazmapper project layers using QGIS
 version=0.1.0
 author=DesignSafe-CI
