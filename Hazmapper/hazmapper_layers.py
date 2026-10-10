@@ -13,12 +13,13 @@ from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
     QgsGeometry,
+    QgsPointXY,
     QgsField,
     QgsFields,
-    QgsWkbTypes,
 )
 import json
 import uuid
+from typing import Optional
 from .utils.display import get_display_name
 from .utils.published_maps import designsafe_project_url, find_published_map
 from .utils.qgis import HAS_KNOWN_EXTENT_PROPERTY, INTERNAL_COG_PROPERTY, quiet_layer
@@ -28,6 +29,7 @@ from .utils.style import (
     apply_point_cloud_style,
     apply_streetview_style,
 )
+from .utils.features import MEMORY_LAYER_TYPE, group_by_geometry_family, layer_name
 from .utils.geometry import json_to_wkt
 from .utils.tiles import (
     attribution_text,
@@ -294,6 +296,107 @@ def set_map_attribution(main_group: QgsLayerTreeGroup, map_url: str) -> None:
         layer.setMetadata(metadata)
 
 
+# Geometry each asset type's style is written for
+_STYLED_FAMILY = {"image": "point", "streetview": "line"}
+
+
+def _asset_fields() -> QgsFields:
+    fields = QgsFields()
+    fields.append(QgsField("asset_type", QVariant.String))
+    fields.append(QgsField("display_path", QVariant.String))
+    return fields
+
+
+def _to_multi_geometry(geojson_geometry: dict) -> Optional[QgsGeometry]:
+    """Convert a GeoJSON geometry to a multi-part QgsGeometry (None if empty or invalid)."""
+    if geojson_geometry.get("type") == "Point":
+        # by far the most common case; skip the round trip through WKT
+        x, y = geojson_geometry["coordinates"][:2]
+        geometry = QgsGeometry.fromPointXY(QgsPointXY(x, y))
+    else:
+        geometry = QgsGeometry.fromWkt(json_to_wkt(json.dumps(geojson_geometry)))
+
+    if geometry is None or geometry.isEmpty():
+        return None
+    if not geometry.isMultipart():
+        geometry.convertToMultiType()
+    return geometry
+
+
+def _warn_about_unshowable(what: str, items: list) -> None:
+    if items:
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Skipped {len(items)} {what} feature(s) whose geometry "
+            "cannot be shown (missing or a geometry collection)",
+            "Hazmapper",
+            Qgis.Warning,
+        )
+
+
+def _build_feature_layer(
+    name: str, family: str, fields: QgsFields, rows: list, update_progress
+) -> Optional[QgsVectorLayer]:
+    """
+    Build a memory layer holding one family of geometry ("point", "line" or "polygon").
+
+    `rows` is a list of (GeoJSON geometry, attribute values). Features that can't be
+    added are reported in the log rather than silently lost.
+    """
+    # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
+    layer = QgsVectorLayer(f"{MEMORY_LAYER_TYPE[family]}?crs=EPSG:4326", name, "memory")
+    if not layer.isValid():
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Failed to create memory layer '{name}'",
+            "Hazmapper",
+            Qgis.Critical,
+        )
+        return None
+
+    with quiet_layer(layer):
+        provider = layer.dataProvider()
+        provider.addAttributes(fields)
+        layer.updateFields()
+
+        total = len(rows)
+        added = 0
+        BATCH = 2000  # bigger batches are faster for memory provider
+        for start in range(0, total, BATCH):
+            batch = []
+            for geojson_geometry, attributes in rows[start : start + BATCH]:
+                try:
+                    geometry = _to_multi_geometry(geojson_geometry)
+                except Exception:
+                    geometry = None
+                if geometry is None:
+                    continue
+                feature = QgsFeature()
+                feature.setGeometry(geometry)
+                feature.setAttributes(attributes)
+                batch.append(feature)
+
+            if batch:
+                ok, _ = provider.addFeatures(batch)
+                if ok:
+                    added += len(batch)
+
+            done = min(start + BATCH, total)
+            update_progress(
+                f"Processing {name}... ({done}/{total})",
+                int(done * 100 / max(total, 1)),
+            )
+
+        if added != total:
+            QgsMessageLog.logMessage(
+                f"[Hazmapper] {total - added} of {total} feature(s) could not be added "
+                f"to layer '{name}'",
+                "Hazmapper",
+                Qgis.Warning,
+            )
+        layer.updateExtents()
+
+    return layer
+
+
 def add_features_layers(
     main_group: QgsLayerTreeGroup,
     features: dict,
@@ -326,79 +429,40 @@ def add_features_layers(
 
         update_progress(f"Processing {asset_type})", -1, force=True)
 
-        # ======== IMAGES / STREETVIEW / VIDEO : just a single memory layer =========
+        # ======== IMAGES / STREETVIEW / VIDEO : one memory layer per kind of geometry =========
         if asset_type in ("video", "image", "streetview"):
-            layer_name = get_display_name(asset_type)
-            # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
-            layer = QgsVectorLayer("MultiPoint?crs=EPSG:4326", layer_name, "memory")
-            if not layer.isValid():
-                QgsMessageLog.logMessage(
-                    f"[Hazmapper] Failed to create memory layer for {asset_type}",
-                    "Hazmapper",
-                    Qgis.Critical,
+            by_family = group_by_geometry_family(items, lambda item: item[0])
+            _warn_about_unshowable(asset_type, by_family.pop(None, []))
+
+            for family, family_items in by_family.items():
+                name = layer_name(get_display_name(asset_type), family, by_family)
+                layer = _build_feature_layer(
+                    name,
+                    family,
+                    _asset_fields(),
+                    [
+                        (
+                            feat["geometry"],
+                            [
+                                asset.get("asset_type", ""),
+                                asset.get("display_path", ""),
+                            ],
+                        )
+                        for feat, asset in family_items
+                    ],
+                    update_progress,
                 )
-                continue
+                if layer is None:
+                    continue
 
-            with quiet_layer(layer):
-                prov = layer.dataProvider()
+                _set_feature_metadata(layer, family_items[0][0], family_items[0][1])
+                # the styles are for the usual geometry (image points, streetview lines)
+                if _STYLED_FAMILY.get(asset_type) == family:
+                    _apply_style_for_asset_type(layer, asset_type)
 
-                fields = QgsFields()
-                fields.append(QgsField("asset_type", QVariant.String))
-                fields.append(QgsField("display_path", QVariant.String))
-                prov.addAttributes(fields)
-                layer.updateFields()
+                QgsProject.instance().addMapLayer(layer, False)
+                main_group.insertLayer(0, layer)
 
-                total = len(items)
-                BATCH = 200  # bigger batches are faster for memory provider
-                for i in range(0, total, BATCH):
-                    feats = []
-                    for feat, asset in items[i : i + BATCH]:
-                        try:
-                            g = QgsGeometry.fromWkt(
-                                json_to_wkt(json.dumps(feat["geometry"]))
-                            )
-                            if not g or g.isEmpty():
-                                continue
-
-                            if QgsWkbTypes.geometryType(
-                                g.wkbType()
-                            ) == QgsWkbTypes.PointGeometry and QgsWkbTypes.isSingleType(
-                                g.wkbType()
-                            ):
-                                g.convertToMultiType()
-
-                            f = QgsFeature()
-                            f.setGeometry(g)
-                            f.setAttributes(
-                                [
-                                    asset.get("asset_type", ""),
-                                    asset.get("display_path", ""),
-                                ]
-                            )
-                            feats.append(f)
-                        except Exception as e:
-                            # Skip bad geometry but keep loading things
-                            QgsMessageLog.logMessage(
-                                f"[Hazmapper] Skipping bad geometry in {asset_type}: {e}",
-                                "Hazmapper",
-                                Qgis.Warning,
-                            )
-                    if feats:
-                        prov.addFeatures(feats)
-
-                    done = min(i + BATCH, total)
-                    pct = int(done * 100 / max(total, 1))
-                    update_progress(
-                        f"Processing {asset_type} features... ({done}/{total})", pct
-                    )
-
-                # finalize, style, insert
-                layer.updateExtents()
-                _set_feature_metadata(layer, items[0][0], items[0][1])
-                _apply_style_for_asset_type(layer, asset_type)
-
-            QgsProject.instance().addMapLayer(layer, False)
-            main_group.insertLayer(0, layer)
             processed += len(items)
             update_progress(f"Completed {asset_type} layer insertion", 100, force=True)
 

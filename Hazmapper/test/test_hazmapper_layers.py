@@ -224,3 +224,93 @@ def test_zoom_to_group_uses_cog_footprint_not_basemap(qgis_app):
         assert extent.yMaximum() == pytest.approx(17.9675, abs=1e-6)
     finally:
         QgsProject.instance().removeAllMapLayers()
+
+
+def _feature(feature_id, geometry, asset_type=None, **properties):
+    assets = [{"asset_type": asset_type, "display_path": f"{feature_id}.file"}]
+    return {
+        "id": feature_id,
+        "geometry": geometry,
+        "properties": properties,
+        "assets": assets if asset_type else [],
+    }
+
+
+POINT = {"type": "Point", "coordinates": [-97.7431, 30.2672]}
+LINE = {"type": "LineString", "coordinates": [[-97.75, 30.26], [-97.74, 30.27]]}
+POLYGON = {
+    "type": "Polygon",
+    "coordinates": [
+        [[-97.75, 30.26], [-97.74, 30.26], [-97.74, 30.27], [-97.75, 30.26]]
+    ],
+}
+
+
+def _load_features(features):
+    """Run add_features_layers and return {layer name: layer}."""
+    from qgis.core import QgsLayerTreeGroup
+    from Hazmapper.hazmapper_layers import add_features_layers
+
+    group = QgsLayerTreeGroup("test group")
+    add_features_layers(group, {"features": features})
+    return {node.name(): node.layer() for node in group.findLayers()}
+
+
+@pytest.mark.qgis_required
+def test_streetview_lines_are_kept(qgis_app):
+    """Streetview features are lines; they must not be lost in a points layer."""
+    from qgis.core import QgsProject, QgsWkbTypes
+
+    try:
+        layers = _load_features(
+            [_feature(1, LINE, "streetview"), _feature(2, LINE, "streetview")]
+        )
+
+        assert set(layers) == {"StreetView"}
+        assert layers["StreetView"].featureCount() == 2
+        assert (
+            QgsWkbTypes.geometryType(layers["StreetView"].wkbType())
+            == QgsWkbTypes.LineGeometry
+        )
+    finally:
+        QgsProject.instance().removeAllMapLayers()
+
+
+@pytest.mark.qgis_required
+def test_media_on_other_geometry_gets_its_own_layer(qgis_app):
+    """A photo attached to a polygon is shown, in a layer of its own."""
+    from qgis.core import QgsProject
+
+    try:
+        layers = _load_features(
+            [
+                _feature(1, POINT, "image"),
+                _feature(2, POINT, "image"),
+                _feature(3, POLYGON, "image"),
+            ]
+        )
+
+        assert set(layers) == {"Images (points)", "Images (polygons)"}
+        assert layers["Images (points)"].featureCount() == 2
+        assert layers["Images (polygons)"].featureCount() == 1
+        assert layers["Images (polygons)"].getFeature(1)["display_path"] == "3.file"
+    finally:
+        QgsProject.instance().removeAllMapLayers()
+
+
+@pytest.mark.qgis_required
+def test_features_that_cannot_be_shown_are_reported(qgis_app):
+    from qgis.core import QgsProject
+
+    collection = {"type": "GeometryCollection", "geometries": [POINT]}
+    try:
+        with patch("Hazmapper.hazmapper_layers.QgsMessageLog") as log:
+            layers = _load_features(
+                [_feature(1, POINT, "image"), _feature(2, collection, "image")]
+            )
+
+        assert layers["Images"].featureCount() == 1
+        messages = [c.args[0] for c in log.logMessage.call_args_list]
+        assert any("Skipped 1 image feature(s)" in m for m in messages)
+    finally:
+        QgsProject.instance().removeAllMapLayers()
