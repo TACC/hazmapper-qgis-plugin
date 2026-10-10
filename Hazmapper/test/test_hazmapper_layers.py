@@ -314,3 +314,64 @@ def test_features_that_cannot_be_shown_are_reported(qgis_app):
         assert any("Skipped 1 image feature(s)" in m for m in messages)
     finally:
         QgsProject.instance().removeAllMapLayers()
+
+
+@pytest.mark.qgis_required
+def test_features_without_assets_are_shown(qgis_app):
+    """Plain features become one layer per kind of geometry, with their properties."""
+    from qgis.core import QgsProject
+
+    try:
+        layers = _load_features(
+            [
+                _feature(11, POINT, name="A", stories=2, height=3),
+                _feature(12, POINT, name="B", stories=None, height=4.5, tags=["x"]),
+                _feature(13, LINE, Id=0),
+                _feature(14, POINT, "image"),
+            ]
+        )
+
+        assert set(layers) == {
+            "Images",
+            "Vector Features (points)",
+            "Vector Features (lines)",
+        }
+
+        points = layers["Vector Features (points)"]
+        assert [f.name() for f in points.fields()] == [
+            "feature_id",
+            "name",
+            "stories",
+            "height",
+            "tags",
+        ]
+        rows = {f["feature_id"]: f for f in points.getFeatures()}
+        assert set(rows) == {11, 12}
+        assert (rows[11]["name"], rows[11]["stories"], rows[11]["height"]) == (
+            "A",
+            2,
+            3.0,
+        )
+        assert rows[12]["height"] == 4.5
+        assert rows[12]["tags"] == '["x"]'
+        assert not rows[12]["stories"]  # null
+        assert not rows[11]["tags"]  # null
+
+        lines = layers["Vector Features (lines)"]
+        assert lines.featureCount() == 1
+        assert [f.name() for f in lines.fields()] == ["feature_id", "Id"]
+    finally:
+        QgsProject.instance().removeAllMapLayers()
+
+
+@pytest.mark.qgis_required
+def test_single_kind_of_plain_feature_gets_the_plain_name(qgis_app):
+    from qgis.core import QgsProject
+
+    try:
+        layers = _load_features([_feature(1, POLYGON), _feature(2, POLYGON)])
+
+        assert set(layers) == {"Vector Features"}
+        assert layers["Vector Features"].featureCount() == 2
+    finally:
+        QgsProject.instance().removeAllMapLayers()

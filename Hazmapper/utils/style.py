@@ -68,3 +68,39 @@ def apply_streetview_style(layer: QgsVectorLayer, style_name: str = "default") -
         layer.renderer().setSymbol(symbol)
 
     layer.triggerRepaint()
+
+
+# Same blue the Hazmapper web app (Leaflet) uses for plain features
+PLAIN_FEATURE_COLOR = "#3388ff"
+
+
+def apply_plain_feature_style(layer: QgsVectorLayer, family: str) -> None:
+    """Style a layer of features that have no asset. `family`: point, line or polygon."""
+    if not layer.isValid():
+        return
+
+    if family == "point":
+        symbol = QgsMarkerSymbol.createSimple(
+            {
+                "name": "circle",
+                "size": "2.4",
+                "color": PLAIN_FEATURE_COLOR,
+                "outline_color": "#ffffff",
+                "outline_width": "0.3",
+            }
+        )
+    elif family == "line":
+        symbol = QgsLineSymbol.createSimple(
+            {"color": PLAIN_FEATURE_COLOR, "width": "0.8", "line_style": "solid"}
+        )
+    else:
+        symbol = QgsFillSymbol.createSimple(
+            {
+                "color": "51,136,255,50",
+                "outline_color": PLAIN_FEATURE_COLOR,
+                "outline_width": "0.66",
+            }
+        )
+
+    layer.setRenderer(QgsSingleSymbolRenderer(symbol))
+    layer.triggerRepaint()

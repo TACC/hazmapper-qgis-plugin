@@ -26,10 +26,18 @@ from .utils.qgis import HAS_KNOWN_EXTENT_PROPERTY, INTERNAL_COG_PROPERTY, quiet_
 
 from .utils.style import (
     apply_camera_icon_style,
+    apply_plain_feature_style,
     apply_point_cloud_style,
     apply_streetview_style,
 )
-from .utils.features import MEMORY_LAYER_TYPE, group_by_geometry_family, layer_name
+from .utils.features import (
+    FEATURE_ID_FIELD,
+    MEMORY_LAYER_TYPE,
+    group_by_geometry_family,
+    layer_name,
+    property_columns,
+    property_value,
+)
 from .utils.geometry import json_to_wkt
 from .utils.tiles import (
     attribution_text,
@@ -296,6 +304,13 @@ def set_map_attribution(main_group: QgsLayerTreeGroup, map_url: str) -> None:
         layer.setMetadata(metadata)
 
 
+# QGIS field type for each kind of property column
+_FIELD_TYPES = {
+    "int": QVariant.LongLong,
+    "float": QVariant.Double,
+    "str": QVariant.String,
+}
+
 # Geometry each asset type's style is written for
 _STYLED_FAMILY = {"image": "point", "streetview": "line"}
 
@@ -408,12 +423,14 @@ def add_features_layers(
     update_progress = make_ui_pacer(progress_callback, 0.30)
     update_progress("Preparing feature layers", -1, force=True)
 
-    #  first group by asset_type
+    #  first group by asset_type; features without an asset are handled at the end
     feature_groups: dict[str, list[tuple[dict, dict]]] = {}
+    plain_features: list[dict] = []
     total_items = 0
     for feat in features.get("features", []):
         assets = feat.get("assets") or []
         if not assets:
+            plain_features.append(feat)
             continue
         asset = assets[0]
         atype = asset.get("asset_type")
@@ -502,8 +519,62 @@ def add_features_layers(
                 root.blockSignals(False)
             update_progress(f"Completed {asset_type} layers", 100, force=True)
 
+    _add_plain_feature_layers(main_group, plain_features, update_progress)
+
     if completion_callback:
         completion_callback()
+
+
+def _add_plain_feature_layers(
+    main_group, plain_features: list, update_progress
+) -> None:
+    """
+    Add the features that have no asset (points, lines and polygons drawn on or
+    imported into the map), one layer per kind of geometry, with their properties
+    as attributes.
+    """
+    if not plain_features:
+        return
+
+    by_family = group_by_geometry_family(plain_features)
+    _warn_about_unshowable("plain", by_family.pop(None, []))
+    base_name = get_display_name("no_asset_vector")
+
+    for family, family_features in by_family.items():
+        columns = property_columns(family_features)
+
+        fields = QgsFields()
+        fields.append(QgsField(FEATURE_ID_FIELD, QVariant.LongLong))
+        for _key, column_name, kind in columns:
+            fields.append(QgsField(column_name, _FIELD_TYPES[kind]))
+
+        rows = []
+        for feat in family_features:
+            properties = feat.get("properties") or {}
+            rows.append(
+                (
+                    feat["geometry"],
+                    [feat.get("id")]
+                    + [
+                        property_value(properties.get(key), kind)
+                        for key, _n, kind in columns
+                    ],
+                )
+            )
+
+        layer = _build_feature_layer(
+            layer_name(base_name, family, by_family),
+            family,
+            fields,
+            rows,
+            update_progress,
+        )
+        if layer is None:
+            continue
+
+        apply_plain_feature_style(layer, family)
+        QgsProject.instance().addMapLayer(layer, False)
+        main_group.insertLayer(0, layer)
 
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
