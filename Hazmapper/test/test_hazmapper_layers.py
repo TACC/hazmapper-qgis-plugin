@@ -393,3 +393,63 @@ def test_missing_previous_group_is_not_a_warning(qgis_app):
     levels = [c.args[2] for c in log.logMessage.call_args_list]
     assert Qgis.Warning not in levels and Qgis.Critical not in levels
     assert QSettings().value(key, None) is None
+
+
+@pytest.mark.qgis_required
+def test_wms_layer_uri(qgis_app):
+    from qgis.core import QgsDataSourceUri
+    from Hazmapper.hazmapper_layers import _tile_layer_uri
+
+    layer = {
+        "name": "Boundaries",
+        "type": "wms",
+        "url": "https://example.org/services/WMSServer?map=a&x=1",
+        "tileOptions": {"format": "jpeg", "layers": "71,72"},
+        "uiOptions": {},
+    }
+
+    uri = QgsDataSourceUri()
+    uri.setEncodedUri(_tile_layer_uri(layer, "https://example.org/geoapi"))
+
+    assert uri.param("url") == "https://example.org/services/WMSServer?map=a&x=1"
+    assert uri.params("layers") == ["71", "72"]
+    assert uri.params("styles") == ["", ""]
+    assert uri.param("format") == "image/jpeg"
+    assert uri.param("crs") == "EPSG:3857"
+    assert not uri.hasParam("type")  # "type=xyz" would make it a tile layer
+
+
+@pytest.mark.qgis_required
+def test_wms_layer_that_does_not_answer_is_skipped(qgis_app):
+    """A WMS service that is down must not stop the rest of the map loading."""
+    from qgis.core import QgsLayerTreeGroup, QgsProject
+    from Hazmapper.hazmapper_layers import add_basemap_layers
+
+    layers = [
+        {
+            "name": "Down",
+            "type": "wms",
+            "url": "http://127.0.0.1:9/wms",
+            "tileOptions": {"layers": "1"},
+            "uiOptions": {"zIndex": 1},
+        },
+        {
+            "name": "OpenStreetMap",
+            "type": "tms",
+            "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            "uiOptions": {"zIndex": 0},
+        },
+        {"name": "No layers", "type": "wms", "url": "http://x/wms", "uiOptions": {}},
+    ]
+    group = QgsLayerTreeGroup("test group")
+
+    try:
+        with patch("Hazmapper.hazmapper_layers.QgsMessageLog") as log:
+            add_basemap_layers(group, layers, None, "https://example.org/geoapi")
+
+        assert [node.name() for node in group.findLayers()] == ["OpenStreetMap"]
+        messages = [c.args[0] for c in log.logMessage.call_args_list]
+        assert any("Failed to load basemap layer: Down" in m for m in messages)
+        assert any("Skipping unsupported layer type: wms" in m for m in messages)
+    finally:
+        QgsProject.instance().removeAllMapLayers()

@@ -6,7 +6,9 @@ from Hazmapper.utils.tiles import (
     cog_tile_url,
     external_tile_url,
     is_internal_cog,
+    is_wms,
     resolve_tile_url,
+    wms_params,
     zoom_range,
 )
 
@@ -148,3 +150,75 @@ def test_cog_bounds_missing_or_malformed(tile_options):
 def test_attribution_text(attribution, expected):
     assert attribution_text({"attribution": attribution}) == expected
     assert attribution_text({}) == ""
+
+
+CENSUS_WMS = {
+    "name": "Census Bound",
+    "type": "wms",
+    "url": (
+        "https://tigerweb.geo.census.gov/arcgis/services/TIGERweb/"
+        "tigerWMS_Current/MapServer/WMSServer"
+    ),
+    "tileOptions": {"format": "jpeg", "layers": "71"},
+    "uiOptions": {"zIndex": -3, "opacity": 0.3, "isActive": True},
+}
+
+
+@pytest.mark.no_qgis_required
+def test_is_wms():
+    assert is_wms(CENSUS_WMS)
+    assert not is_wms({"type": "tms"})
+    assert not is_wms({})
+
+
+@pytest.mark.no_qgis_required
+def test_wms_params():
+    assert wms_params(CENSUS_WMS) == {
+        "url": CENSUS_WMS["url"],
+        "layers": ["71"],
+        "styles": [""],
+        "format": "image/jpeg",
+        "crs": "EPSG:3857",
+    }
+
+
+@pytest.mark.no_qgis_required
+def test_wms_params_several_layers_and_styles():
+    layer = {
+        "type": "wms",
+        "url": "https://example.org/wms",
+        "tileOptions": {
+            "layers": "roads, rivers ,lakes",
+            "format": "image/png",
+            "params": {"styles": "thick"},
+        },
+    }
+
+    params = wms_params(layer)
+
+    assert params["layers"] == ["roads", "rivers", "lakes"]
+    assert params["styles"] == [
+        "thick",
+        "",
+        "",
+    ]  # one per layer, default when not given
+    assert params["format"] == "image/png"
+
+
+@pytest.mark.no_qgis_required
+@pytest.mark.parametrize(
+    "layer",
+    [
+        {"type": "wms", "url": "https://example.org/wms", "tileOptions": {}},
+        {"type": "wms", "url": "https://example.org/wms"},
+        {"type": "wms", "url": "", "tileOptions": {"layers": "71"}},
+    ],
+)
+def test_wms_params_incomplete_record(layer):
+    assert wms_params(layer) is None
+
+
+@pytest.mark.no_qgis_required
+def test_wms_params_defaults_to_png():
+    layer = {"type": "wms", "url": "https://x.org/wms", "tileOptions": {"layers": "a"}}
+    assert wms_params(layer)["format"] == "image/png"

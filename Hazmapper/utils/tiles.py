@@ -4,7 +4,8 @@ GET /projects/{id}/tile-servers/.
 
 Two shapes matter:
 
-1. External tile layers (basemaps): `url` is a tile URL template.
+1. External tile layers (basemaps): `url` is a tile URL template, or the address of
+   a WMS service when type="wms".
 
 2. Internal COG layers (GeoTIFFs imported through Hazmapper): internal=true,
    kind="cog", and `url` is the server-side path of the COG file, e.g.
@@ -80,6 +81,45 @@ def cog_bounds(layer: Dict[str, Any]) -> Optional[Tuple[float, float, float, flo
         return float(west), float(south), float(east), float(north)
     except (TypeError, ValueError):
         return None
+
+
+def is_wms(layer: Dict[str, Any]) -> bool:
+    """True if the layer is a WMS service (drawn by the server per request, not tiles)."""
+    return layer.get("type") == "wms"
+
+
+def wms_params(layer: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    """
+    Return what QGIS needs to open a WMS layer: url, layers, styles, format and crs.
+
+    geoapi keeps the Leaflet options in tileOptions, e.g. {"layers": "71", "format": "jpeg"}.
+    Returns None if the record names no WMS layers.
+    """
+    tile_options = layer.get("tileOptions") or {}
+    params = tile_options.get("params") or {}
+
+    def names(value) -> list:
+        return [name.strip() for name in str(value or "").split(",") if name.strip()]
+
+    layers = names(tile_options.get("layers") or params.get("layers"))
+    if not layer.get("url") or not layers:
+        return None
+
+    # one style per layer; "" asks the server for that layer's default style
+    styles = names(tile_options.get("styles") or params.get("styles"))
+    styles = (styles + [""] * len(layers))[: len(layers)]
+
+    image_format = str(tile_options.get("format") or params.get("format") or "png")
+    if "/" not in image_format:
+        image_format = f"image/{image_format}"
+
+    return {
+        "url": layer["url"],
+        "layers": layers,
+        "styles": styles,
+        "format": image_format,
+        "crs": "EPSG:3857",
+    }
 
 
 def resolve_tile_url(layer: Dict[str, Any], geoapi_url: str) -> Optional[str]:

@@ -43,7 +43,9 @@ from .utils.tiles import (
     attribution_text,
     cog_bounds,
     is_internal_cog,
+    is_wms,
     resolve_tile_url,
+    wms_params,
     zoom_range,
 )
 from .utils.ui import make_ui_pacer
@@ -192,10 +194,35 @@ def _set_cog_extent(raster_layer: QgsRasterLayer, layer_data: dict) -> None:
     raster_layer.setCustomProperty(HAS_KNOWN_EXTENT_PROPERTY, True)
 
 
+def _wms_layer_uri(params: dict) -> str:
+    """Build the data source URI for a WMS layer from tiles.wms_params()."""
+    uri = QgsDataSourceUri()
+    uri.setParam("url", params["url"])
+    # one "layers" and one "styles" entry per WMS layer
+    for layer, style in zip(params["layers"], params["styles"]):
+        uri.setParam("layers", layer)
+        uri.setParam("styles", style)
+    uri.setParam("format", params["format"])
+    uri.setParam("crs", params["crs"])
+    return bytes(uri.encodedUri()).decode()
+
+
+def _tile_layer_uri(layer_data: dict, geoapi_url: str) -> Optional[str]:
+    """Return the data source URI for a tile-server layer, or None if unsupported."""
+    if is_wms(layer_data):
+        params = wms_params(layer_data)
+        return _wms_layer_uri(params) if params else None
+
+    tile_url = resolve_tile_url(layer_data, geoapi_url)
+    if tile_url is None:
+        return None
+    return _xyz_layer_uri(tile_url, *zoom_range(layer_data))
+
+
 def add_basemap_layers(
     main_group, layers: list[dict], progress_callback, geoapi_url: str
 ):
-    """Add the map's tile layers (basemaps and internal COGs) as XYZ tile layers."""
+    """Add the map's tile layers: basemaps, internal COGs and WMS services."""
     # Sort by zIndex (ascending: lower zIndex means lower in stack)
     sorted_layers = sorted(layers, key=lambda x: x["uiOptions"].get("zIndex", 0))
     total_layers = len(sorted_layers)
@@ -209,8 +236,8 @@ def add_basemap_layers(
             ui_options = layer_data["uiOptions"]
             opacity = ui_options.get("opacity", 1.0)
 
-            tile_url = resolve_tile_url(layer_data, geoapi_url)
-            if tile_url is None:
+            uri = _tile_layer_uri(layer_data, geoapi_url)
+            if uri is None:
                 QgsMessageLog.logMessage(
                     f"Skipping unsupported layer type: {layer_data.get('type')}",
                     "Hazmapper",
@@ -218,18 +245,15 @@ def add_basemap_layers(
                 )
                 continue
 
-            uri = _xyz_layer_uri(tile_url, *zoom_range(layer_data))
-
-            # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
-            # This is a legacy naming convention in QGIS; 'wms' is used
-            # for both XYZ and WMS tile layers.
+            # Note: QGIS's 'wms' provider handles both XYZ tiles and real WMS services.
             raster_layer = QgsRasterLayer(uri, name, "wms")
 
             # Validate layer
             if not raster_layer.isValid():
-                # Note: isValid() only checks URI/provider syntax. It does NOT verify that the
-                # tile URL responds correctly (e.g., 403/404). Network errors will appear only
-                # when tiles are actually requested/rendered.
+                # Note: for XYZ tiles isValid() only checks the source's syntax; it does NOT
+                # verify that the tile URL responds (e.g., 403/404), which only shows when
+                # tiles are drawn. For WMS it means the service did not answer when asked
+                # what it offers.
                 QgsMessageLog.logMessage(
                     f"Failed to load basemap layer: {name} (check URL)",
                     "Hazmapper",
