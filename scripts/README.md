@@ -29,3 +29,13 @@ Without uv, install `requests` yourself (e.g. `pip install requests`) and run wi
 - `README_PUBLISHED_MAPS.md` - Markdown table with clickable links to projects and maps
 - `projects_with_hazmapper_maps.json` - Raw JSON data for reference
 
+
+### qgis_dev_setup.sh
+
+macOS only. Finds installed QGIS apps (`/Applications/*qgis*.app`) and their QGIS3/QGIS4 user
+profiles, then prints the commands to link this repo's `Hazmapper/` plugin into each profile and
+to launch each QGIS. It only prints; nothing is changed.
+
+```bash
+./scripts/qgis_dev_setup.sh
+```
