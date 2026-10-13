@@ -345,9 +345,21 @@ _STYLED_FAMILY = {"image": "point", "streetview": "line"}
 
 def _asset_fields() -> QgsFields:
     fields = QgsFields()
+    fields.append(QgsField(FEATURE_ID_FIELD, QVariant.LongLong))
     fields.append(QgsField("asset_type", QVariant.String))
     fields.append(QgsField("display_path", QVariant.String))
+    fields.append(QgsField("asset_path", QVariant.String))
     return fields
+
+
+def _asset_attributes(feature: dict, asset: dict) -> list:
+    """Values for _asset_fields(), in the same order."""
+    return [
+        feature.get("id"),
+        asset.get("asset_type", ""),
+        asset.get("display_path", ""),
+        asset.get("path", ""),
+    ]
 
 
 def _to_multi_geometry(geojson_geometry: dict) -> Optional[QgsGeometry]:
@@ -486,13 +498,7 @@ def add_features_layers(
                     family,
                     _asset_fields(),
                     [
-                        (
-                            feat["geometry"],
-                            [
-                                asset.get("asset_type", ""),
-                                asset.get("display_path", ""),
-                            ],
-                        )
+                        (feat["geometry"], _asset_attributes(feat, asset))
                         for feat, asset in family_items
                     ],
                     update_progress,
@@ -611,11 +617,7 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     layer = QgsVectorLayer(f"{geom_type}?crs=EPSG:4326", name, "memory")
     provider = layer.dataProvider()
 
-    # Define fields
-    fields = QgsFields()
-    fields.append(QgsField("asset_type", QVariant.String))
-    fields.append(QgsField("display_path", QVariant.String))
-    provider.addAttributes(fields)
+    provider.addAttributes(_asset_fields())
     layer.updateFields()
 
     # Build feature
@@ -623,7 +625,7 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(json.dumps(feature["geometry"]))))
 
     asset = feature.get("assets", [{}])[0] or {}
-    f.setAttributes([asset.get("asset_type", ""), asset.get("display_path", "")])
+    f.setAttributes(_asset_attributes(feature, asset))
 
     provider.addFeature(f)
     return layer

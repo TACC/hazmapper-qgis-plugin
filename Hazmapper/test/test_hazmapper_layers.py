@@ -138,8 +138,10 @@ def test_add_layers_builds_real_layers(qgis_app):
 
         assert layers["Images"].featureCount() == 2
         assert [f.name() for f in layers["Images"].fields()] == [
+            "feature_id",
             "asset_type",
             "display_path",
+            "asset_path",
         ]
         assert layers["scan"].featureCount() == 1
         assert layers["OpenStreetMap"].opacity() == 0.5
