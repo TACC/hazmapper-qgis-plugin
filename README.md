@@ -9,6 +9,8 @@ This QGIS plugin allows users to connect to **Hazmapper**, a geospatial data pla
 - Browse and load Hazmapper projects directly into QGIS
 - Fetch and display GeoJSON datasets served by the GEOAPI backend
 - Interact with published project layers in your local QGIS environment
+- Show a map's tile layers, including GeoTIFFs imported through Hazmapper (drawn as tiles by
+  Hazmapper's tile server, with the styling chosen in Hazmapper)
 
 ## Requirements
 
@@ -61,9 +63,31 @@ Then restart QGIS and enable the plugin via the Plugin Manager:
 * Navigate to `Plugins` → `Manage and Install Plugins`
 * Locate Hazmapper in the list and check the box to enable it
 
-💡 Use the [Plugin Reloader plugin](https://plugins.qgis.org/plugins/plugin_reloader/) to reload this plugin without restarting QGIS.
+After changing code or switching branches, reload the plugin (see [Reloading the plugin](#reloading-the-plugin)).
 
 Instead if linking, You can also copy Hazmapper/ into your QGIS plugins folder, but this requires re-copying every time you make changes.
+
+### Reloading the plugin
+
+QGIS loads the plugin's code once. After you edit code or switch branches, reload it in one
+of these ways:
+
+* **Restart QGIS.** Always works.
+* **Python console** (no extra plugin needed). Open `Plugins` → `Python Console` and run:
+
+  ```python
+  import qgis.utils; qgis.utils.reloadPlugin("Hazmapper")
+  ```
+
+  It returns `True` when the plugin was reloaded, and `False` if the plugin isn't enabled.
+* **Plugin Manager.** In `Plugins` → `Manage and Install Plugins`, uncheck Hazmapper and check
+  it again.
+* **[Plugin Reloader plugin](https://plugins.qgis.org/plugins/plugin_reloader/).** Install it
+  from `Manage and Install Plugins` (once per QGIS version and profile), choose Hazmapper in
+  its settings, then use its reload button.
+
+If the Hazmapper panel was open, close and reopen it from the toolbar button so you get the
+new version of the panel.
 
 ### Running multiple QGIS versions (macOS)
 
