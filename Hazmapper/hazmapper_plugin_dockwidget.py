@@ -297,6 +297,7 @@ class HazmapperPluginDockWidget(QDockWidget):
         finally:
             project.blockSignals(False)
             canvas.freeze(False)
+            self._announce_new_layers()
             canvas.refresh()
 
     # ---- Selected feature -------------------------------------------------
@@ -355,6 +356,21 @@ class HazmapperPluginDockWidget(QDockWidget):
             except RuntimeError:
                 pass  # already deleted along with the canvas
             self._highlight = None
+
+    def _announce_new_layers(self):
+        """
+        Tell QGIS about the layers that were added while project signals were blocked.
+
+        Without this QGIS never hears that layers arrived: in a fresh session it keeps
+        showing its welcome page instead of the map.
+        """
+        try:
+            nodes = self.main_group.findLayers() if self.main_group is not None else []
+            layers = [node.layer() for node in nodes if node.layer() is not None]
+        except RuntimeError:
+            return
+        if layers:
+            QgsProject.instance().layersAdded.emit(layers)
 
     def _update_progress(self, message: str, progress: int):
         """Update progress bar and status message."""

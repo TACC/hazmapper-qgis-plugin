@@ -302,3 +302,57 @@ def test_pick_prefers_points_over_polygons(qgis_app):
 
     assert min([polygon, line, point], key=_pick_priority) is point
     assert min([polygon, line], key=_pick_priority) is line
+
+
+@pytest.mark.qgis_required
+def test_loading_a_map_tells_qgis_that_layers_were_added(qgis_app):
+    """
+    Project signals are blocked while layers are built. QGIS must still hear about the
+    new layers afterwards, or a fresh session keeps showing its welcome page.
+    """
+    from qgis.core import QgsProject
+    from Hazmapper import hazmapper_plugin_dockwidget as dockwidget_module
+    from Hazmapper.hazmapper_fetch_task import GeoApiStep
+    from Hazmapper.hazmapper_icons import PLUGIN_DIR
+
+    dock = dockwidget_module.HazmapperPluginDockWidget(
+        iface=MagicMock(), plugin_dir=PLUGIN_DIR
+    )
+    dock.current_project_url = "https://example.org/hazmapper/project-public/abc/"
+    announced = []
+    QgsProject.instance().layersAdded.connect(announced.append)
+    try:
+        dock.on_load_data(GeoApiStep.PROJECT, {"name": "Test map", "uuid": "abc"})
+        dock.on_load_data(
+            GeoApiStep.BASEMAP_LAYERS,
+            [
+                {
+                    "name": "Roads",
+                    "type": "tms",
+                    "url": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                    "uiOptions": {"zIndex": 0},
+                }
+            ],
+        )
+        dock.on_load_data(
+            GeoApiStep.FEATURES,
+            {
+                "features": [
+                    {
+                        "id": 1,
+                        "geometry": {"type": "Point", "coordinates": [-97.7, 30.2]},
+                        "properties": {"name": "A"},
+                        "assets": [],
+                    }
+                ]
+            },
+        )
+
+        assert len(announced) == 1
+        assert sorted(layer.name() for layer in announced[0]) == [
+            "Roads",
+            "Vector Features",
+        ]
+    finally:
+        QgsProject.instance().layersAdded.disconnect(announced.append)
+        QgsProject.instance().removeAllMapLayers()
