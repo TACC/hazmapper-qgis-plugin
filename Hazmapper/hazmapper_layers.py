@@ -22,7 +22,13 @@ import uuid
 from typing import Optional
 from .utils.display import get_display_name
 from .utils.published_maps import designsafe_project_url, find_published_map
-from .utils.qgis import HAS_KNOWN_EXTENT_PROPERTY, INTERNAL_COG_PROPERTY, quiet_layer
+from .utils.qgis import (
+    GEOAPI_URL_PROPERTY,
+    HAS_KNOWN_EXTENT_PROPERTY,
+    INTERNAL_COG_PROPERTY,
+    MAP_URL_PROPERTY,
+    quiet_layer,
+)
 
 from .utils.style import (
     apply_camera_icon_style,
@@ -290,6 +296,17 @@ def add_basemap_layers(
                 "Hazmapper",
                 Qgis.Critical,
             )
+
+
+def set_layer_source(
+    main_group: QgsLayerTreeGroup, map_url: str, geoapi_url: str
+) -> None:
+    """Record on every layer which Hazmapper map and GeoAPI it came from (used for links)."""
+    for node in main_group.findLayers():
+        layer = node.layer()
+        if layer is not None:
+            layer.setCustomProperty(MAP_URL_PROPERTY, map_url)
+            layer.setCustomProperty(GEOAPI_URL_PROPERTY, geoapi_url)
 
 
 def set_map_attribution(main_group: QgsLayerTreeGroup, map_url: str) -> None:

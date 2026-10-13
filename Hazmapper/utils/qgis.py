@@ -16,6 +16,10 @@ HAS_KNOWN_EXTENT_PROPERTY = "hazmapper_has_known_extent"
 # Set on tile layers drawn from a GeoTIFF that was imported into the Hazmapper map
 INTERNAL_COG_PROPERTY = "hazmapper_internal_cog"
 
+# Set on every layer of a loaded map: the Hazmapper map it came from, and its GeoAPI
+MAP_URL_PROPERTY = "hazmapper_map_url"
+GEOAPI_URL_PROPERTY = "hazmapper_geoapi_url"
+
 
 def zoom_to_group(group: QgsLayerTreeGroup):
     """Zoom to the combined extent of the map's data layers inside `group`, recursively."""

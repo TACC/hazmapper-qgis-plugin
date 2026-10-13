@@ -7,7 +7,8 @@ from qgis.PyQt.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qgis.PyQt.QtGui import QIcon
+from qgis.PyQt.QtGui import QColor, QIcon
+from qgis.gui import QgsHighlight, QgsMapCanvas
 from qgis.PyQt.QtCore import Qt, pyqtSignal, QTimer
 from qgis.core import (
     QgsApplication,
@@ -15,6 +16,7 @@ from qgis.core import (
     Qgis,
     QgsNetworkAccessManager,
     QgsProject,
+    QgsVectorLayer,
 )
 
 from .hazmapper_fetch_task import LoadGeoApiProjectTask, GeoApiTaskState, GeoApiStep
@@ -23,12 +25,15 @@ from .hazmapper_layers import (
     add_features_layers,
     create_main_group,
     remove_previous_main_group,
+    set_layer_source,
     set_map_attribution,
 )
 from .hazmapper_icons import plugin_icon_path
 from .utils.environment import PRODUCTION_GEOAPI_URL, geoapi_url_for_map
 from .utils.qgis import zoom_to_group
+from .components.feature_info import FeatureInfo
 from .components.map_status import MapStatus
+from .feature_picker import FeaturePickTool
 from .components.project_selector import ProjectSelector
 
 from typing import Dict, Any, List, Optional, Union
@@ -149,6 +154,13 @@ class HazmapperPluginDockWidget(QDockWidget):
         # --- Map Status Component (includes status + all metadata) ---
         self.map_status = MapStatus()
         layout.addWidget(self.map_status)
+
+        # --- Selected Feature Component (pick a feature to see it and its links) ---
+        self.feature_info = FeatureInfo()
+        self.feature_info.pick_button.toggled.connect(self._on_pick_toggled)
+        self._pick_tool = None
+        self._highlight = None
+        layout.addWidget(self.feature_info)
 
         layout.addStretch()
 
@@ -280,10 +292,69 @@ class HazmapperPluginDockWidget(QDockWidget):
                 self._on_features_complete,
             )
             set_map_attribution(self.main_group, self.current_project_url)
+            set_layer_source(self.main_group, self.current_project_url, self.geoapi_url)
+            self._clear_picked_feature()
         finally:
             project.blockSignals(False)
             canvas.freeze(False)
             canvas.refresh()
+
+    # ---- Selected feature -------------------------------------------------
+
+    def _feature_layers(self) -> list:
+        """Visible feature layers of the loaded map, topmost first."""
+        try:
+            nodes = self.main_group.findLayers() if self.main_group is not None else []
+            return [
+                node.layer()
+                for node in nodes
+                if node.isVisible() and isinstance(node.layer(), QgsVectorLayer)
+            ]
+        except RuntimeError:
+            # the group was removed from the layer tree by hand
+            return []
+
+    def _on_pick_toggled(self, checked: bool):
+        canvas = self.iface.mapCanvas()
+        if checked:
+            if self._pick_tool is None:
+                self._pick_tool = FeaturePickTool(canvas, self._feature_layers)
+                self._pick_tool.setButton(self.feature_info.pick_button)
+                self._pick_tool.picked.connect(self._on_feature_picked)
+                self._pick_tool.missed.connect(self._clear_picked_feature)
+            canvas.setMapTool(self._pick_tool)
+        elif self._pick_tool is not None:
+            canvas.unsetMapTool(self._pick_tool)
+
+    def _on_feature_picked(self, layer, feature):
+        self._clear_highlight()
+        self.feature_info.show_feature(layer, feature)
+
+        # Mark it on the map without touching the user's own QGIS selection
+        canvas = self.iface.mapCanvas()
+        if isinstance(canvas, QgsMapCanvas):
+            self._highlight = QgsHighlight(canvas, feature.geometry(), layer)
+            self._highlight.setColor(QColor(255, 80, 0))
+            self._highlight.setFillColor(QColor(255, 80, 0, 60))
+            self._highlight.setWidth(3)
+            self._highlight.setBuffer(1.0)
+            self._highlight.show()
+
+    def _clear_picked_feature(self):
+        """Empty the panel and remove the mark on the map (e.g. after clicking nothing)."""
+        self._clear_highlight()
+        self.feature_info.clear()
+
+    def _clear_highlight(self):
+        if self._highlight is not None:
+            try:
+                self._highlight.hide()
+                scene = self._highlight.scene()
+                if scene is not None:
+                    scene.removeItem(self._highlight)
+            except RuntimeError:
+                pass  # already deleted along with the canvas
+            self._highlight = None
 
     def _update_progress(self, message: str, progress: int):
         """Update progress bar and status message."""
@@ -317,6 +388,10 @@ class HazmapperPluginDockWidget(QDockWidget):
         # Cancel any running tasks
         if self.active_task:
             self.active_task.cancel()
+
+        # Stop picking and remove the mark on the map
+        self.feature_info.pick_button.setChecked(False)
+        self._clear_highlight()
 
         self.closingPlugin.emit()
         event.accept()
