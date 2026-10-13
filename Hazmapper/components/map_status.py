@@ -1,4 +1,9 @@
+import html
+
 from qgis.PyQt.QtWidgets import (
+    QDialog,
+    QDialogButtonBox,
+    QPlainTextEdit,
     QWidget,
     QLabel,
     QVBoxLayout,
@@ -9,6 +14,7 @@ from qgis.PyQt.QtWidgets import (
 )
 from qgis.PyQt.QtCore import Qt, QDateTime
 
+from ..utils.display import shorten
 from ..utils.published_maps import designsafe_project_url, find_published_map
 
 
@@ -64,9 +70,13 @@ class MapStatus(QWidget):
         self.description_title = QLabel("Description:")
         self.description_value = QLabel("–")
         self.description_value.setWordWrap(True)
+        self.description_value.setTextFormat(Qt.TextFormat.RichText)
         self.description_value.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
+            | Qt.TextInteractionFlag.LinksAccessibleByMouse
         )
+        self.description_value.linkActivated.connect(self._show_full_description)
+        self._description = ""
         self.description_value.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
@@ -169,7 +179,7 @@ class MapStatus(QWidget):
             self.name_value.setText(name)
 
         if description is not None:
-            self.description_value.setText(description)
+            self.set_description(description)
 
         if url is not None:
             self.map_value.setText(f'<a href="{url}">{url}</a>')
@@ -185,7 +195,7 @@ class MapStatus(QWidget):
     def clear_project_data(self):
         """Clear all project metadata."""
         self.name_value.setText("–")
-        self.description_value.setText("–")
+        self.set_description("–")
         self.map_value.setText("–")
         self.refreshed_value.setText("–")
         self._hide_designsafe_row()
@@ -195,8 +205,30 @@ class MapStatus(QWidget):
         self.name_value.setText(name)
 
     def set_description(self, description):
-        """Set project description."""
-        self.description_value.setText(description)
+        """Set project description; a long one is cut short with a "more" link."""
+        self._description = description or ""
+        short = shorten(self._description)
+        text = html.escape(short)
+        if short != " ".join(self._description.split()):
+            text += '… <a href="#more">more</a>'
+        self.description_value.setText(text)
+
+    def _show_full_description(self, _link=None):
+        """Show the whole description in its own window."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(self.name_value.text() or "Map description")
+        dialog.resize(520, 360)
+
+        text = QPlainTextEdit(self._description)
+        text.setReadOnly(True)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        buttons.rejected.connect(dialog.reject)
+
+        layout = QVBoxLayout()
+        layout.addWidget(text)
+        layout.addWidget(buttons)
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def set_map_url(self, url):
         """Set project map URL."""

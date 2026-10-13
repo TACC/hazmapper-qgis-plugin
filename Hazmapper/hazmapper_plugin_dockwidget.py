@@ -1,6 +1,8 @@
 from qgis.PyQt.QtWidgets import (
+    QFrame,
     QLabel,
     QDockWidget,
+    QScrollArea,
     QHBoxLayout,
     QVBoxLayout,
     QWidget,
@@ -67,6 +69,31 @@ def _setup_network_logger():
 # _setup_network_logger()
 
 
+class _VerticalScrollArea(QScrollArea):
+    """
+    Scroll area for the dock's content: scrolls up and down only, and asks for at least
+    its content's width so nothing is cut off at the side.
+    """
+
+    def _scrollbar_width(self) -> int:
+        return self.verticalScrollBar().sizeHint().width()
+
+    def minimumSizeHint(self):
+        hint = super().minimumSizeHint()
+        if self.widget() is not None:
+            content = self.widget().minimumSizeHint()
+            hint.setWidth(content.width() + self._scrollbar_width())
+        return hint
+
+    def sizeHint(self):
+        hint = super().sizeHint()
+        if self.widget() is not None:
+            content = self.widget().sizeHint()
+            hint.setWidth(content.width() + self._scrollbar_width())
+            hint.setHeight(content.height())
+        return hint
+
+
 class HazmapperPluginDockWidget(QDockWidget):
     closingPlugin = pyqtSignal()
 
@@ -87,9 +114,14 @@ class HazmapperPluginDockWidget(QDockWidget):
         # Restrict docking to right side only
         self.setAllowedAreas(Qt.DockWidgetArea.RightDockWidgetArea)
 
-        # Central widget
+        # Central widget, scrollable so a tall panel still fits a small screen
         main_widget = QWidget()
-        self.setWidget(main_widget)
+        scroll_area = _VerticalScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setFrameShape(QFrame.Shape.NoFrame)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        scroll_area.setWidget(main_widget)
+        self.setWidget(scroll_area)
 
         # Layout containers
         layout = QVBoxLayout()

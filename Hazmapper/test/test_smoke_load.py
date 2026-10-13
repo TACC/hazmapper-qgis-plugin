@@ -87,3 +87,40 @@ def test_load_request_uses_the_maps_own_geoapi(qgis_app, app_path, geoapi_path):
         "abc-123", base_url=f"{host}/{geoapi_path}/projects"
     )
     assert dock.geoapi_url == f"{host}/{geoapi_path}"
+
+
+@pytest.mark.qgis_required
+def test_long_description_is_cut_with_a_more_link(qgis_app):
+    from Hazmapper.components.map_status import MapStatus
+
+    status = MapStatus()
+    long_text = (
+        "This project aims to identify the compounding impacts of hurricanes. " * 8
+    )
+
+    status.set_description("Short & sweet")
+    assert status.description_value.text() == "Short &amp; sweet"
+
+    status.set_description(long_text)
+    shown = status.description_value.text()
+    assert len(shown) < 200
+    assert shown.endswith('… <a href="#more">more</a>')
+    assert status._description == long_text  # the window shows all of it
+
+
+@pytest.mark.qgis_required
+def test_dock_content_can_scroll(qgis_app):
+    from qgis.PyQt.QtWidgets import QScrollArea
+    from Hazmapper import hazmapper_plugin_dockwidget as dockwidget_module
+    from Hazmapper.hazmapper_icons import PLUGIN_DIR
+
+    dock = dockwidget_module.HazmapperPluginDockWidget(
+        iface=MagicMock(), plugin_dir=PLUGIN_DIR
+    )
+
+    scroll_area = dock.widget()
+    assert isinstance(scroll_area, QScrollArea)
+    assert scroll_area.widgetResizable()
+    # never narrower than its content, so nothing is cut off at the side
+    content_width = scroll_area.widget().minimumSizeHint().width()
+    assert scroll_area.minimumSizeHint().width() >= content_width
