@@ -32,6 +32,12 @@ jobs:
           echo "metadata=$META tag=$TAG"
           [ "$META" = "$TAG" ] || { echo "Version mismatch!"; exit 1; }
 
+      - name: Release notes from CHANGELOG.md
+        run: |
+          uv run qgis-plugin-ci changelog "${GITHUB_REF_NAME#v}" > release-notes.md
+          [ -s release-notes.md ] || { echo "No CHANGELOG.md entry for ${GITHUB_REF_NAME#v}!"; exit 1; }
+          cat release-notes.md
+
       - name: Build zip
         run: make zip
 
@@ -39,4 +45,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: "*.zip"
+          body_path: release-notes.md
           generate_release_notes: true
