@@ -9,20 +9,20 @@ email=designsafe-ci@tacc.utexas.edu
 
 about=This plugin allows users to interact with Hazmapper/Taggit/GeoAPI data. It allows user to display a hazmapper map project directly on a QGIS map.
 
-tracker=https://www.designsafe-ci.org/help/#support-ticket
+tracker=https://github.com/TACC/hazmapper-qgis-plugin/issues
 repository=https://github.com/TACC/hazmapper-qgis-plugin
 # End of mandatory metadata
 
 # Recommended items:
 
 hasProcessingProvider=no
-# Uncomment the following line and add your changelog:
-# changelog=
+# Filled from CHANGELOG.md by qgis-plugin-ci when packaging
+changelog=
 
 # Tags are comma separated with spaces allowed
 tags=
 
-homepage=https://www.designsafe-ci.org/user-guide/tools/visualization/#hazmapper-user-guide
+homepage=https://www.designsafe-ci.org/user-guide/tools/visualization/hazmapper/
 category=Plugins
 icon=icons/Hazmapper.svg
 # experimental flag
