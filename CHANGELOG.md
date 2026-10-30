@@ -6,6 +6,7 @@
 - Mark the plugin as stable (no longer experimental)
 - Leave development scripts and tests out of the plugin package
 - Only request GeoAPI data over https
+- Log failed progress updates instead of ignoring them
 
 ## [0.2.0] - 2026-10-29
 - Show internal COGs (as tile layers), WMS layers, and features without assets
