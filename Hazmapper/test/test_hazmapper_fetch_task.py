@@ -88,6 +88,21 @@ def test_request_data_network_error(mock_urlopen, task_with_mocks):
 
 
 @pytest.mark.qgis_required
+@pytest.mark.parametrize(
+    "base_url", ["file:///etc", "ftp://example.org", "http://example.org"]
+)
+@patch("urllib.request.urlopen")
+def test_request_data_refuses_non_https(mock_urlopen, base_url):
+    task = LoadGeoApiProjectTask(uuid="test-uuid-123", base_url=base_url)
+
+    result = task._request_data_from_backend("/test", "test data")
+
+    assert result is None
+    assert "Not an https URL" in task.error
+    mock_urlopen.assert_not_called()
+
+
+@pytest.mark.qgis_required
 @patch("urllib.request.urlopen")
 def test_request_data_json_error(mock_urlopen, task_with_mocks):
     mock_response = Mock()

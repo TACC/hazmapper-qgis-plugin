@@ -63,7 +63,11 @@ class LoadGeoApiProjectTask(QgsTask):
         req = request.Request(full_url, headers=headers)
 
         try:
-            with request.urlopen(req) as response:
+            # GeoAPI is always https (see utils/environment.py)
+            if not full_url.startswith("https://"):
+                raise ValueError(f"Not an https URL: {full_url}")
+
+            with request.urlopen(req) as response:  # nosec B310
                 QgsMessageLog.logMessage(
                     f"Received {user_description}", "Hazmapper", Qgis.Info
                 )
