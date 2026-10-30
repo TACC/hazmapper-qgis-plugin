@@ -1,0 +1,4 @@
+# Left out of the plugin zip, which qgis-plugin-ci builds with `git archive`.
+# plugins.qgis.org blocks any upload containing .sh files, and flags asserts in tests.
+Hazmapper/scripts export-ignore
+Hazmapper/test export-ignore

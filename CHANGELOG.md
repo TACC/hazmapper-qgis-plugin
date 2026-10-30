@@ -4,6 +4,7 @@
 
 ## [0.2.1] - 2026-10-30
 - Mark the plugin as stable (no longer experimental)
+- Leave development scripts and tests out of the plugin package
 
 ## [0.2.0] - 2026-10-29
 - Show internal COGs (as tile layers), WMS layers, and features without assets
