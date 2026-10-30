@@ -2,6 +2,9 @@
 
 <!-- No "###" subsections: qgis-plugin-ci copies each version's list into metadata.txt and stops at the next "##". -->
 
+## [0.2.1] - 2026-10-30
+- Mark the plugin as stable (no longer experimental)
+
 ## [0.2.0] - 2026-10-29
 - Show internal COGs (as tile layers), WMS layers, and features without assets
 - Keep streetview lines and photos attached to lines or polygons

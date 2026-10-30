@@ -3,7 +3,7 @@ name=Hazmapper
 qgisMinimumVersion=3.34
 qgisMaximumVersion=4.99
 description=Display Hazmapper project layers using QGIS
-version=0.2.0
+version=0.2.1
 author=DesignSafe-CI
 email=designsafe-ci@tacc.utexas.edu
 
@@ -26,7 +26,7 @@ homepage=https://www.designsafe-ci.org/user-guide/tools/visualization/hazmapper/
 category=Plugins
 icon=icons/Hazmapper.svg
 # experimental flag
-experimental=True
+experimental=False
 
 # deprecated flag (applies to the whole plugin, not just a single version)
 deprecated=False
