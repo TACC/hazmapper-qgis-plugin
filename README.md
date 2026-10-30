@@ -163,6 +163,14 @@ make test-qgis-all
 make zip
 ```
 
+To also run the security checks that plugins.qgis.org runs on uploads:
+
+```bash
+make scan
+```
+
+CI runs these on every build. An upload with a critical finding is blocked by the site.
+
 ## Related Projects
 
 - Hazmapper: [https://hazmapper.tacc.utexas.edu/hazmapper/](https://hazmapper.tacc.utexas.edu/hazmapper/)

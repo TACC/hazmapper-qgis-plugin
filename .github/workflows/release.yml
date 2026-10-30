@@ -41,6 +41,9 @@ jobs:
       - name: Build zip
         run: make zip
 
+      - name: Scan zip
+        run: ./scripts/scan_plugin_zip.sh Hazmapper.*.zip
+
       - name: Create GitHub Release and upload ZIP
         uses: softprops/action-gh-release@v2
         with:

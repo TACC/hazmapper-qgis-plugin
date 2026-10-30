@@ -68,6 +68,8 @@ jobs:
           uv sync --group dev
       - name: Build plugin ZIP
         run: make zip
+      - name: Scan plugin ZIP
+        run: ./scripts/scan_plugin_zip.sh Hazmapper.*.zip
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
