@@ -1,4 +1,4 @@
-.PHONY: test-noqgis test-qgis test-qgis-all zip
+.PHONY: test-noqgis test-qgis test-qgis-all zip scan
 
 PLUGIN_PATH = Hazmapper
 
@@ -31,3 +31,7 @@ test-qgis-all:
 zip:
 	@echo "Packaging version $(VERSION)"
 	uv run qgis-plugin-ci package "$(VERSION)" --allow-uncommitted
+
+# Build the ZIP and run the plugins.qgis.org security checks on it
+scan: zip
+	./scripts/scan_plugin_zip.sh $(PLUGIN_PATH).$(VERSION).zip

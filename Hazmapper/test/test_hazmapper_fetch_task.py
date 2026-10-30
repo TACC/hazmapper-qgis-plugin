@@ -88,6 +88,21 @@ def test_request_data_network_error(mock_urlopen, task_with_mocks):
 
 
 @pytest.mark.qgis_required
+@pytest.mark.parametrize(
+    "base_url", ["file:///etc", "ftp://example.org", "http://example.org"]
+)
+@patch("urllib.request.urlopen")
+def test_request_data_refuses_non_https(mock_urlopen, base_url):
+    task = LoadGeoApiProjectTask(uuid="test-uuid-123", base_url=base_url)
+
+    result = task._request_data_from_backend("/test", "test data")
+
+    assert result is None
+    assert "Not an https URL" in task.error
+    mock_urlopen.assert_not_called()
+
+
+@pytest.mark.qgis_required
 @patch("urllib.request.urlopen")
 def test_request_data_json_error(mock_urlopen, task_with_mocks):
     mock_response = Mock()
@@ -132,6 +147,29 @@ def test_run_success(
     ]
     on_progress.assert_has_calls(expected_calls)
     assert on_progress.call_count == 3
+
+
+@pytest.mark.qgis_required
+@patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
+def test_run_success_without_tile_layers(
+    mock_request, task_with_mocks, project_metadata, features_data
+):
+    """A map with no tile layers (empty list) still loads."""
+    mock_request.side_effect = [project_metadata, [], features_data]
+    task, _on_done, _on_status, on_progress = task_with_mocks
+
+    assert task.run() is True
+    on_progress.assert_any_call(GeoApiStep.BASEMAP_LAYERS, [])
+    on_progress.assert_any_call(GeoApiStep.FEATURES, features_data)
+
+
+@pytest.mark.qgis_required
+@patch.object(LoadGeoApiProjectTask, "_request_data_from_backend")
+def test_run_tile_layers_fetch_failure(mock_request, task_with_mocks, project_metadata):
+    mock_request.side_effect = [project_metadata, None]
+    task, *_ = task_with_mocks
+
+    assert task.run() is False
 
 
 @pytest.mark.qgis_required

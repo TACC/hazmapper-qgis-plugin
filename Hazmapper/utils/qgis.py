@@ -10,9 +10,19 @@ from qgis.core import (
 from qgis.utils import iface
 from contextlib import contextmanager
 
+# Set on tile layers that were given a real extent (rather than the whole world)
+HAS_KNOWN_EXTENT_PROPERTY = "hazmapper_has_known_extent"
+
+# Set on tile layers drawn from a GeoTIFF that was imported into the Hazmapper map
+INTERNAL_COG_PROPERTY = "hazmapper_internal_cog"
+
+# Set on every layer of a loaded map: the Hazmapper map it came from, and its GeoAPI
+MAP_URL_PROPERTY = "hazmapper_map_url"
+GEOAPI_URL_PROPERTY = "hazmapper_geoapi_url"
+
 
 def zoom_to_group(group: QgsLayerTreeGroup):
-    """Zoom to the combined extent of all vector layers inside `group`, recursively."""
+    """Zoom to the combined extent of the map's data layers inside `group`, recursively."""
     canvas = iface.mapCanvas()
     if not canvas or not group:
         return
@@ -30,8 +40,12 @@ def zoom_to_group(group: QgsLayerTreeGroup):
                 layer = child.layer()
                 if not layer or not layer.isValid():
                     continue
-                if layer.type() != QgsMapLayer.VectorLayer:
-                    continue  # only consider vector layers
+                # Vector layers, plus tile layers whose real extent we know (internal
+                # COGs). Other tile layers (basemaps) cover the whole world.
+                if layer.type() != QgsMapLayer.VectorLayer and not layer.customProperty(
+                    HAS_KNOWN_EXTENT_PROPERTY
+                ):
+                    continue
 
                 lyr_extent = layer.extent()
                 if lyr_extent is None or lyr_extent.isEmpty():
