@@ -1,5 +1,10 @@
 from qgis.PyQt.QtCore import QVariant, QSettings
 from qgis.core import (
+    QgsAbstractMetadataBase,
+    QgsCoordinateReferenceSystem,
+    QgsCoordinateTransform,
+    QgsDataSourceUri,
+    QgsRectangle,
     QgsMessageLog,
     Qgis,
     QgsProject,
@@ -8,22 +13,47 @@ from qgis.core import (
     QgsVectorLayer,
     QgsFeature,
     QgsGeometry,
-    QgsRaster,
+    QgsPointXY,
     QgsField,
     QgsFields,
-    QgsWkbTypes,
 )
 import json
 import uuid
+from typing import Optional
 from .utils.display import get_display_name
-from .utils.qgis import quiet_layer
+from .utils.published_maps import designsafe_project_url, find_published_map
+from .utils.qgis import (
+    GEOAPI_URL_PROPERTY,
+    HAS_KNOWN_EXTENT_PROPERTY,
+    INTERNAL_COG_PROPERTY,
+    MAP_URL_PROPERTY,
+    quiet_layer,
+)
 
 from .utils.style import (
     apply_camera_icon_style,
+    apply_plain_feature_style,
     apply_point_cloud_style,
     apply_streetview_style,
 )
+from .utils.features import (
+    FEATURE_ID_FIELD,
+    MEMORY_LAYER_TYPE,
+    group_by_geometry_family,
+    layer_name,
+    property_columns,
+    property_value,
+)
 from .utils.geometry import json_to_wkt
+from .utils.tiles import (
+    attribution_text,
+    cog_bounds,
+    is_internal_cog,
+    is_wms,
+    resolve_tile_url,
+    wms_params,
+    zoom_range,
+)
 from .utils.ui import make_ui_pacer
 
 
@@ -80,11 +110,15 @@ def remove_previous_main_group() -> None:
             settings.remove("HazmapperPlugin/internal_group_uuid")
             return
 
+    # Normal after restarting QGIS, opening another project or deleting the group by
+    # hand: the saved id is from an earlier map that is no longer in the layer tree.
     QgsMessageLog.logMessage(
-        f"[Hazmapper] No group found for internal UUID {internal_uuid}",
+        f"[Hazmapper] Previous map group {internal_uuid} is no longer present; "
+        "nothing to remove.",
         "Hazmapper",
-        Qgis.Warning,
+        Qgis.Info,
     )
+    settings.remove("HazmapperPlugin/internal_group_uuid")
 
 
 def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup:
@@ -131,7 +165,70 @@ def create_main_group(project_name: str, project_uuid: str) -> QgsLayerTreeGroup
         raise
 
 
-def add_basemap_layers(main_group, layers: list[dict], progress_callback):
+def _xyz_layer_uri(tile_url: str, min_zoom: int, max_zoom: int) -> str:
+    """
+    Build the data source URI for an XYZ tile layer.
+
+    QgsDataSourceUri does the encoding because a tile URL can have its own query
+    string (TiTiler URLs do), and QGIS 3 and QGIS 4 decode a hand-encoded URI differently.
+    """
+    uri = QgsDataSourceUri()
+    uri.setParam("type", "xyz")
+    uri.setParam("url", tile_url)
+    uri.setParam("zmin", str(min_zoom))
+    uri.setParam("zmax", str(max_zoom))
+    return bytes(uri.encodedUri()).decode()
+
+
+def _set_cog_extent(raster_layer: QgsRasterLayer, layer_data: dict) -> None:
+    """
+    Give an internal COG tile layer the footprint of its COG.
+
+    A tile layer otherwise reports the whole world as its extent, so "Zoom to Layer"
+    and the plugin's own zoom would be useless for it.
+    """
+    bounds = cog_bounds(layer_data)
+    if bounds is None:
+        return
+
+    to_layer_crs = QgsCoordinateTransform(
+        QgsCoordinateReferenceSystem("EPSG:4326"),
+        raster_layer.crs(),
+        QgsProject.instance(),
+    )
+    raster_layer.setExtent(to_layer_crs.transformBoundingBox(QgsRectangle(*bounds)))
+    raster_layer.setCustomProperty(HAS_KNOWN_EXTENT_PROPERTY, True)
+
+
+def _wms_layer_uri(params: dict) -> str:
+    """Build the data source URI for a WMS layer from tiles.wms_params()."""
+    uri = QgsDataSourceUri()
+    uri.setParam("url", params["url"])
+    # one "layers" and one "styles" entry per WMS layer
+    for layer, style in zip(params["layers"], params["styles"]):
+        uri.setParam("layers", layer)
+        uri.setParam("styles", style)
+    uri.setParam("format", params["format"])
+    uri.setParam("crs", params["crs"])
+    return bytes(uri.encodedUri()).decode()
+
+
+def _tile_layer_uri(layer_data: dict, geoapi_url: str) -> Optional[str]:
+    """Return the data source URI for a tile-server layer, or None if unsupported."""
+    if is_wms(layer_data):
+        params = wms_params(layer_data)
+        return _wms_layer_uri(params) if params else None
+
+    tile_url = resolve_tile_url(layer_data, geoapi_url)
+    if tile_url is None:
+        return None
+    return _xyz_layer_uri(tile_url, *zoom_range(layer_data))
+
+
+def add_basemap_layers(
+    main_group, layers: list[dict], progress_callback, geoapi_url: str
+):
+    """Add the map's tile layers: basemaps, internal COGs and WMS services."""
     # Sort by zIndex (ascending: lower zIndex means lower in stack)
     sorted_layers = sorted(layers, key=lambda x: x["uiOptions"].get("zIndex", 0))
     total_layers = len(sorted_layers)
@@ -142,51 +239,27 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
     for i, layer_data in enumerate(sorted_layers):
         try:
             name = layer_data["name"]
-            url = layer_data["url"]
-            layer_type = layer_data["type"]
-            opacity = layer_data["uiOptions"].get("opacity", 1.0)
+            ui_options = layer_data["uiOptions"]
+            opacity = ui_options.get("opacity", 1.0)
 
-            # QgsMessageLog.logMessage(
-            #    f"[Basemap] Name: {name}\n"
-            #    f"          Type: {layer_type}\n"
-            #    f"          URL: {url}\n"
-            #    f"          Tile Options: {layer_data.get('tileOptions')}\n"
-            #    f"          UI Options: {layer_data.get('uiOptions')}",
-            #    "Hazmapper",
-            #    Qgis.Info,
-            # )
-
-            # Handle subdomain placeholder (pick 'a' for QGIS)
-            if "{s}" in url:
-                url = url.replace("{s}", "a")
-
-            if layer_type == "tms" or (layer_type == "arcgis" and "/tiles/" in url):
-                # Ensure tile path includes expected XYZ format
-                if not url.endswith("/tile/{z}/{y}/{x}") and "{z}/{x}/{y}" not in url:
-                    tile_url = url.rstrip("/") + "/tile/{z}/{y}/{x}"
-                else:
-                    tile_url = url
-
-                # TODO: Later, fetch actual min/max zoom from service metadata
-                uri = f"type=xyz&url={tile_url}&zmin=0&zmax=22"
-            else:
+            uri = _tile_layer_uri(layer_data, geoapi_url)
+            if uri is None:
                 QgsMessageLog.logMessage(
-                    f"Skipping unsupported layer type: {layer_type}",
+                    f"Skipping unsupported layer type: {layer_data.get('type')}",
                     "Hazmapper",
                     Qgis.Warning,
                 )
                 continue
 
-            # Note: XYZ tiles are loaded via the 'wms' provider in QGIS.
-            # This is a legacy naming convention in QGIS; 'wms' is used
-            # for both XYZ and WMS tile layers.
+            # Note: QGIS's 'wms' provider handles both XYZ tiles and real WMS services.
             raster_layer = QgsRasterLayer(uri, name, "wms")
 
             # Validate layer
             if not raster_layer.isValid():
-                # Note: isValid() only checks URI/provider syntax. It does NOT verify that the
-                # tile URL responds correctly (e.g., 403/404). Network errors will appear only
-                # when tiles are actually requested/rendered.
+                # Note: for XYZ tiles isValid() only checks the source's syntax; it does NOT
+                # verify that the tile URL responds (e.g., 403/404), which only shows when
+                # tiles are drawn. For WMS it means the service did not answer when asked
+                # what it offers.
                 QgsMessageLog.logMessage(
                     f"Failed to load basemap layer: {name} (check URL)",
                     "Hazmapper",
@@ -197,19 +270,25 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
             # Apply opacity
             raster_layer.setOpacity(opacity)
 
-            # Enable magnify/oversampling for smoother zoom beyond max LOD
-            if hasattr(raster_layer, "setZoomedInResamplingMethod"):
-                # Note: Per-layer magnify/resampling is available in QGIS 3.34+ only.
-                # On older versions (like 3.32), resampling must be set globally via QGIS Options.
-                raster_layer.resamplingEnabled = True
-                raster_layer.setZoomedInResamplingMethod(
-                    QgsRaster.ResamplingMethod.Nearest
-                )
-                raster_layer.setZoomedInMagnificationFactor(4)
+            if is_internal_cog(layer_data):
+                raster_layer.setCustomProperty(INTERNAL_COG_PROPERTY, True)
+                _set_cog_extent(raster_layer, layer_data)
+            else:
+                # Basemaps and other external tiles keep their provider's attribution
+                attribution = attribution_text(layer_data)
+                if attribution:
+                    metadata = raster_layer.metadata()
+                    metadata.setRights([attribution])
+                    raster_layer.setMetadata(metadata)
 
             # Add layer to group (on top of stack)
             QgsProject.instance().addMapLayer(raster_layer, False)
-            main_group.insertLayer(0, raster_layer)
+            node = main_group.insertLayer(0, raster_layer)
+
+            # Layers switched off in Hazmapper are added but left unchecked
+            if node is not None and ui_options.get("isActive", True) is False:
+                node.setItemVisibilityChecked(False)
+
             update_progress("Adding basemap layers", int(i * 100 / total_layers))
         except Exception as e:
             QgsMessageLog.logMessage(
@@ -217,6 +296,177 @@ def add_basemap_layers(main_group, layers: list[dict], progress_callback):
                 "Hazmapper",
                 Qgis.Critical,
             )
+
+
+def set_layer_source(
+    main_group: QgsLayerTreeGroup, map_url: str, geoapi_url: str
+) -> None:
+    """Record on every layer which Hazmapper map and GeoAPI it came from (used for links)."""
+    for node in main_group.findLayers():
+        layer = node.layer()
+        if layer is not None:
+            layer.setCustomProperty(MAP_URL_PROPERTY, map_url)
+            layer.setCustomProperty(GEOAPI_URL_PROPERTY, geoapi_url)
+
+
+def set_map_attribution(main_group: QgsLayerTreeGroup, map_url: str) -> None:
+    """
+    Record where the map's own data came from on each of its layers: the feature
+    layers and the internal COGs (not basemaps, which have their provider's attribution).
+
+    Shown in QGIS under Layer Properties > Information: credit to DesignSafe and
+    Hazmapper, a link to the Hazmapper map and, when the map belongs to a published
+    DesignSafe project, a link to that project.
+    """
+    links = [QgsAbstractMetadataBase.Link("Hazmapper map", "WWW:LINK", map_url)]
+
+    published = find_published_map(map_url) or {}
+    project_id = published.get("designSafeProjectId")
+    if project_id:
+        project_name = published.get("designSafeProjectName")
+        link_name = f"DesignSafe project {project_id}"
+        if project_name:
+            link_name += f" | {project_name}"
+        links.append(
+            QgsAbstractMetadataBase.Link(
+                link_name, "WWW:LINK", designsafe_project_url(project_id)
+            )
+        )
+
+    for node in main_group.findLayers():
+        layer = node.layer()
+        if layer is None:
+            continue
+        is_map_data = isinstance(layer, QgsVectorLayer) or layer.customProperty(
+            INTERNAL_COG_PROPERTY
+        )
+        if not is_map_data:
+            continue
+
+        metadata = layer.metadata()
+        metadata.setRights(["DesignSafe", "Hazmapper"])
+        metadata.setLinks(links)
+        layer.setMetadata(metadata)
+
+
+# QGIS field type for each kind of property column
+_FIELD_TYPES = {
+    "int": QVariant.LongLong,
+    "float": QVariant.Double,
+    "str": QVariant.String,
+}
+
+# Geometry each asset type's style is written for
+_STYLED_FAMILY = {"image": "point", "streetview": "line"}
+
+
+def _asset_fields() -> QgsFields:
+    fields = QgsFields()
+    fields.append(QgsField(FEATURE_ID_FIELD, QVariant.LongLong))
+    fields.append(QgsField("asset_type", QVariant.String))
+    fields.append(QgsField("display_path", QVariant.String))
+    fields.append(QgsField("asset_path", QVariant.String))
+    return fields
+
+
+def _asset_attributes(feature: dict, asset: dict) -> list:
+    """Values for _asset_fields(), in the same order."""
+    return [
+        feature.get("id"),
+        asset.get("asset_type", ""),
+        asset.get("display_path", ""),
+        asset.get("path", ""),
+    ]
+
+
+def _to_multi_geometry(geojson_geometry: dict) -> Optional[QgsGeometry]:
+    """Convert a GeoJSON geometry to a multi-part QgsGeometry (None if empty or invalid)."""
+    if geojson_geometry.get("type") == "Point":
+        # by far the most common case; skip the round trip through WKT
+        x, y = geojson_geometry["coordinates"][:2]
+        geometry = QgsGeometry.fromPointXY(QgsPointXY(x, y))
+    else:
+        geometry = QgsGeometry.fromWkt(json_to_wkt(json.dumps(geojson_geometry)))
+
+    if geometry is None or geometry.isEmpty():
+        return None
+    if not geometry.isMultipart():
+        geometry.convertToMultiType()
+    return geometry
+
+
+def _warn_about_unshowable(what: str, items: list) -> None:
+    if items:
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Skipped {len(items)} {what} feature(s) whose geometry "
+            "cannot be shown (missing or a geometry collection)",
+            "Hazmapper",
+            Qgis.Warning,
+        )
+
+
+def _build_feature_layer(
+    name: str, family: str, fields: QgsFields, rows: list, update_progress
+) -> Optional[QgsVectorLayer]:
+    """
+    Build a memory layer holding one family of geometry ("point", "line" or "polygon").
+
+    `rows` is a list of (GeoJSON geometry, attribute values). Features that can't be
+    added are reported in the log rather than silently lost.
+    """
+    # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
+    layer = QgsVectorLayer(f"{MEMORY_LAYER_TYPE[family]}?crs=EPSG:4326", name, "memory")
+    if not layer.isValid():
+        QgsMessageLog.logMessage(
+            f"[Hazmapper] Failed to create memory layer '{name}'",
+            "Hazmapper",
+            Qgis.Critical,
+        )
+        return None
+
+    with quiet_layer(layer):
+        provider = layer.dataProvider()
+        provider.addAttributes(fields)
+        layer.updateFields()
+
+        total = len(rows)
+        added = 0
+        BATCH = 2000  # bigger batches are faster for memory provider
+        for start in range(0, total, BATCH):
+            batch = []
+            for geojson_geometry, attributes in rows[start : start + BATCH]:
+                try:
+                    geometry = _to_multi_geometry(geojson_geometry)
+                except Exception:
+                    geometry = None
+                if geometry is None:
+                    continue
+                feature = QgsFeature()
+                feature.setGeometry(geometry)
+                feature.setAttributes(attributes)
+                batch.append(feature)
+
+            if batch:
+                ok, _ = provider.addFeatures(batch)
+                if ok:
+                    added += len(batch)
+
+            done = min(start + BATCH, total)
+            update_progress(
+                f"Processing {name}... ({done}/{total})",
+                int(done * 100 / max(total, 1)),
+            )
+
+        if added != total:
+            QgsMessageLog.logMessage(
+                f"[Hazmapper] {total - added} of {total} feature(s) could not be added "
+                f"to layer '{name}'",
+                "Hazmapper",
+                Qgis.Warning,
+            )
+        layer.updateExtents()
+
+    return layer
 
 
 def add_features_layers(
@@ -230,12 +480,14 @@ def add_features_layers(
     update_progress = make_ui_pacer(progress_callback, 0.30)
     update_progress("Preparing feature layers", -1, force=True)
 
-    #  first group by asset_type
+    #  first group by asset_type; features without an asset are handled at the end
     feature_groups: dict[str, list[tuple[dict, dict]]] = {}
+    plain_features: list[dict] = []
     total_items = 0
     for feat in features.get("features", []):
         assets = feat.get("assets") or []
         if not assets:
+            plain_features.append(feat)
             continue
         asset = assets[0]
         atype = asset.get("asset_type")
@@ -251,79 +503,34 @@ def add_features_layers(
 
         update_progress(f"Processing {asset_type})", -1, force=True)
 
-        # ======== IMAGES / STREETVIEW / VIDEO : just a single memory layer =========
+        # ======== IMAGES / STREETVIEW / VIDEO : one memory layer per kind of geometry =========
         if asset_type in ("video", "image", "streetview"):
-            layer_name = get_display_name(asset_type)
-            # TODO Replace memory layers. https://github.com/TACC/hazmapper-qgis-plugin/issues/10
-            layer = QgsVectorLayer("MultiPoint?crs=EPSG:4326", layer_name, "memory")
-            if not layer.isValid():
-                QgsMessageLog.logMessage(
-                    f"[Hazmapper] Failed to create memory layer for {asset_type}",
-                    "Hazmapper",
-                    Qgis.Critical,
+            by_family = group_by_geometry_family(items, lambda item: item[0])
+            _warn_about_unshowable(asset_type, by_family.pop(None, []))
+
+            for family, family_items in by_family.items():
+                name = layer_name(get_display_name(asset_type), family, by_family)
+                layer = _build_feature_layer(
+                    name,
+                    family,
+                    _asset_fields(),
+                    [
+                        (feat["geometry"], _asset_attributes(feat, asset))
+                        for feat, asset in family_items
+                    ],
+                    update_progress,
                 )
-                continue
+                if layer is None:
+                    continue
 
-            with quiet_layer(layer):
-                prov = layer.dataProvider()
+                _set_feature_metadata(layer, family_items[0][0], family_items[0][1])
+                # the styles are for the usual geometry (image points, streetview lines)
+                if _STYLED_FAMILY.get(asset_type) == family:
+                    _apply_style_for_asset_type(layer, asset_type)
 
-                fields = QgsFields()
-                fields.append(QgsField("asset_type", QVariant.String))
-                fields.append(QgsField("display_path", QVariant.String))
-                prov.addAttributes(fields)
-                layer.updateFields()
+                QgsProject.instance().addMapLayer(layer, False)
+                main_group.insertLayer(0, layer)
 
-                total = len(items)
-                BATCH = 200  # bigger batches are faster for memory provider
-                for i in range(0, total, BATCH):
-                    feats = []
-                    for feat, asset in items[i : i + BATCH]:
-                        try:
-                            g = QgsGeometry.fromWkt(
-                                json_to_wkt(json.dumps(feat["geometry"]))
-                            )
-                            if not g or g.isEmpty():
-                                continue
-
-                            if QgsWkbTypes.geometryType(
-                                g.wkbType()
-                            ) == QgsWkbTypes.PointGeometry and QgsWkbTypes.isSingleType(
-                                g.wkbType()
-                            ):
-                                g.convertToMultiType()
-
-                            f = QgsFeature()
-                            f.setGeometry(g)
-                            f.setAttributes(
-                                [
-                                    asset.get("asset_type", ""),
-                                    asset.get("display_path", ""),
-                                ]
-                            )
-                            feats.append(f)
-                        except Exception as e:
-                            # Skip bad geometry but keep loading things
-                            QgsMessageLog.logMessage(
-                                f"[Hazmapper] Skipping bad geometry in {asset_type}: {e}",
-                                "Hazmapper",
-                                Qgis.Warning,
-                            )
-                    if feats:
-                        prov.addFeatures(feats)
-
-                    done = min(i + BATCH, total)
-                    pct = int(done * 100 / max(total, 1))
-                    update_progress(
-                        f"Processing {asset_type} features... ({done}/{total})", pct
-                    )
-
-                # finalize, style, insert
-                layer.updateExtents()
-                _set_feature_metadata(layer, items[0][0], items[0][1])
-                _apply_style_for_asset_type(layer, asset_type)
-
-            QgsProject.instance().addMapLayer(layer, False)
-            main_group.insertLayer(0, layer)
             processed += len(items)
             update_progress(f"Completed {asset_type} layer insertion", 100, force=True)
 
@@ -363,8 +570,62 @@ def add_features_layers(
                 root.blockSignals(False)
             update_progress(f"Completed {asset_type} layers", 100, force=True)
 
+    _add_plain_feature_layers(main_group, plain_features, update_progress)
+
     if completion_callback:
         completion_callback()
+
+
+def _add_plain_feature_layers(
+    main_group, plain_features: list, update_progress
+) -> None:
+    """
+    Add the features that have no asset (points, lines and polygons drawn on or
+    imported into the map), one layer per kind of geometry, with their properties
+    as attributes.
+    """
+    if not plain_features:
+        return
+
+    by_family = group_by_geometry_family(plain_features)
+    _warn_about_unshowable("plain", by_family.pop(None, []))
+    base_name = get_display_name("no_asset_vector")
+
+    for family, family_features in by_family.items():
+        columns = property_columns(family_features)
+
+        fields = QgsFields()
+        fields.append(QgsField(FEATURE_ID_FIELD, QVariant.LongLong))
+        for _key, column_name, kind in columns:
+            fields.append(QgsField(column_name, _FIELD_TYPES[kind]))
+
+        rows = []
+        for feat in family_features:
+            properties = feat.get("properties") or {}
+            rows.append(
+                (
+                    feat["geometry"],
+                    [feat.get("id")]
+                    + [
+                        property_value(properties.get(key), kind)
+                        for key, _n, kind in columns
+                    ],
+                )
+            )
+
+        layer = _build_feature_layer(
+            layer_name(base_name, family, by_family),
+            family,
+            fields,
+            rows,
+            update_progress,
+        )
+        if layer is None:
+            continue
+
+        apply_plain_feature_style(layer, family)
+        QgsProject.instance().addMapLayer(layer, False)
+        main_group.insertLayer(0, layer)
 
 
 def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
@@ -373,11 +634,7 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     layer = QgsVectorLayer(f"{geom_type}?crs=EPSG:4326", name, "memory")
     provider = layer.dataProvider()
 
-    # Define fields
-    fields = QgsFields()
-    fields.append(QgsField("asset_type", QVariant.String))
-    fields.append(QgsField("display_path", QVariant.String))
-    provider.addAttributes(fields)
+    provider.addAttributes(_asset_fields())
     layer.updateFields()
 
     # Build feature
@@ -385,7 +642,7 @@ def _create_memory_layer(feature: dict, name: str) -> QgsVectorLayer:
     f.setGeometry(QgsGeometry.fromWkt(json_to_wkt(json.dumps(feature["geometry"]))))
 
     asset = feature.get("assets", [{}])[0] or {}
-    f.setAttributes([asset.get("asset_type", ""), asset.get("display_path", "")])
+    f.setAttributes(_asset_attributes(feature, asset))
 
     provider.addFeature(f)
     return layer

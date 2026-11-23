@@ -1,5 +1,6 @@
 import time
 from typing import Callable, Optional
+from qgis.core import Qgis, QgsMessageLog
 from qgis.PyQt.QtCore import QEventLoop
 from qgis.PyQt.QtWidgets import QApplication
 
@@ -21,8 +22,11 @@ def make_ui_pacer(
             if progress_cb and (msg is not None or pct is not None):
                 try:
                     progress_cb(msg or "", 0 if pct is None else int(pct))
-                except Exception:
-                    pass
+                except Exception as e:
+                    # A failed progress update shouldn't stop the map loading
+                    QgsMessageLog.logMessage(
+                        f"Progress update failed: {e}", "Hazmapper", Qgis.Warning
+                    )
             QApplication.processEvents(
                 QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents
             )

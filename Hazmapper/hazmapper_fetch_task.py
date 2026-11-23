@@ -63,7 +63,11 @@ class LoadGeoApiProjectTask(QgsTask):
         req = request.Request(full_url, headers=headers)
 
         try:
-            with request.urlopen(req) as response:
+            # GeoAPI is always https (see utils/environment.py)
+            if not full_url.startswith("https://"):
+                raise ValueError(f"Not an https URL: {full_url}")
+
+            with request.urlopen(req) as response:  # nosec B310
                 QgsMessageLog.logMessage(
                     f"Received {user_description}", "Hazmapper", Qgis.Info
                 )
@@ -106,7 +110,8 @@ class LoadGeoApiProjectTask(QgsTask):
             endpoint=f"/{self.project_id}/tile-servers/",
             user_description="map data (basemap/tile layers)",
         )
-        if not basemap_layers:
+        # None means the request failed; an empty list is a map without tile layers
+        if basemap_layers is None:
             return False
         else:
             self.progress_data.emit(GeoApiStep.BASEMAP_LAYERS, basemap_layers)
@@ -116,7 +121,7 @@ class LoadGeoApiProjectTask(QgsTask):
             f"point_cloud,streetview,questionnaire,no_asset_vector",
             user_description="map data (features)",
         )
-        if not features:
+        if features is None:
             return False
         else:
             self.progress_data.emit(GeoApiStep.FEATURES, features)
